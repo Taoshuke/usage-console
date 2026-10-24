@@ -1,0 +1,9 @@
+# 依赖与构建缓存
+node_modules/
+.wrangler/
+logs/
+
+# 凭据与本地环境
+.dev.vars
+.env
+.env.*

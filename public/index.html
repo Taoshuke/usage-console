@@ -1,0 +1,624 @@
+<title>Usage Console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky control bar (source + range), then one hero line (the number and what it is made of),
+   a KPI strip, quotas, the daily chart, month blocks, a breakdown table and hours. Dark only; terminal
+   manners (mono labels, prompt marks, inverted tabs, dashed rules) without imitating a terminal. */
+:root{
+  --bg:#0A0C0F; --raise:#0F1216; --well:#14181D; --rule:#1E242B; --rule-2:#2A313A;
+  --fg:#E4E7EB; --fg-2:#A2A9B4; --fg-3:#6A7280; --fg-4:#4A515C;
+  --c1:#E5B567; --c2:#6CC5C0; --c3:#C895D6; --c4:#7FA6E8; --c5:#93C47D; --c6:#E07F73; --c7:#8A929E;
+  --heat-0:#14181D; --heat-1:#1B3434; --heat-2:#24514F; --heat-3:#378078; --heat-4:#6CC5C0;
+  --up:#E07F73; --down:#93C47D;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace;
+  --sans:"IBM Plex Sans","PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.page{max-width:1160px;margin:0 auto}
+.mono{font-family:var(--mono)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:1px solid var(--c1);outline-offset:2px}
+
+/* Control bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--rule);
+  margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.bar-in{max-width:1160px;margin:0 auto;display:flex;align-items:center;gap:12px 24px;min-height:52px;flex-wrap:wrap;padding-block:8px}
+.brand{font:600 13px var(--mono);letter-spacing:.02em;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.brand b{width:8px;height:14px;background:var(--c1);display:inline-block}
+.tabs{display:flex;gap:2px;font:500 12.5px var(--mono);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{appearance:none;border:0;background:transparent;color:var(--fg-2);padding:5px 10px;cursor:pointer;white-space:nowrap;border-radius:2px}
+.tabs button:hover{color:var(--fg)}
+.tabs button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.tabs button .sw{display:inline-block;width:6px;height:6px;margin-right:7px;vertical-align:1px}
+.src{flex:1 1 auto;min-width:0}
+.rng{margin-left:auto}
+@media (max-width:640px){
+  .bar-in{gap:6px;padding-block:8px 6px}
+  .brand{flex:1}
+  .src{order:3;flex-basis:100%;margin-inline:-4px}
+}
+
+.status{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font:12px var(--mono);color:var(--fg-3);padding:18px 0 4px}
+.status .ok{color:var(--down)} .status .stale{color:var(--c1)}
+.flag{color:var(--c3);border:1px dashed color-mix(in srgb,var(--c3) 55%,transparent);padding:0 6px;border-radius:2px}
+
+/* Section heads */
+.sec{padding-top:56px}
+.sh{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-bottom:16px}
+.sh::after{content:"";order:1;flex:1 1 40px;border-top:1px dashed var(--rule-2);min-width:24px}
+.sh > :not(h2){order:2}
+.sh h2{margin:0;font:500 12.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg-2)}
+.sh h2::before{content:"› ";color:var(--c1)}
+.sh .aside{font:12px var(--mono);color:var(--fg-3)}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:36px 64px;padding-top:32px;align-items:end}
+@media (max-width:860px){.hero{grid-template-columns:minmax(0,1fr)}}
+.metric-sw{display:inline-flex;gap:2px;font:500 12px var(--mono);margin-bottom:14px}
+.metric-sw button{appearance:none;background:transparent;border:1px solid var(--rule-2);color:var(--fg-2);padding:3px 9px;cursor:pointer;border-radius:2px}
+.metric-sw button[aria-pressed="true"]{border-color:var(--fg);color:var(--fg)}
+.big{font:500 clamp(56px,9.5vw,104px)/.92 var(--sans);font-feature-settings:"tnum";letter-spacing:-.045em;white-space:nowrap}
+.big .u{font-size:.3em;letter-spacing:0;color:var(--fg-3);font-weight:500;margin-left:.4em}
+.hero-sub{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin-top:14px;font:12.5px var(--mono);color:var(--fg-2)}
+.delta{padding:1px 6px;border-radius:2px;background:var(--well)}
+.delta.up{color:var(--up)} .delta.down{color:var(--down)}
+.spark{margin-top:22px;height:64px}
+.spark svg{display:block;width:100%;height:64px}
+
+.comp-bar{display:flex;height:8px;gap:2px;margin-bottom:14px}
+.comp-bar span{min-width:2px}
+.comp{display:flex;flex-direction:column}
+.comp-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto 64px;gap:10px;align-items:baseline;padding:7px 0;border-top:1px dashed var(--rule-2);font-size:13px}
+.comp-row:first-child{border-top:0}
+.comp-row i{width:8px;height:8px;align-self:center}
+.comp-row .n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.comp-row .v{font-family:var(--mono)}
+.comp-row .p{font-family:var(--mono);color:var(--fg-3);text-align:right}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(var(--n,6),minmax(0,1fr));border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-top:48px}
+.kpi{padding:20px 18px 20px 0;min-width:0}
+.kpi + .kpi{padding-left:18px;border-left:1px dashed var(--rule-2)}
+.kpi .k{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg-3);display:flex;gap:6px;align-items:center}
+.kpi .k em{font-style:normal;color:var(--fg-4);border:1px solid var(--rule-2);padding:0 4px;letter-spacing:0;text-transform:none}
+.kpi .v{font:500 26px/1.15 var(--sans);font-feature-settings:"tnum";letter-spacing:-.025em;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .v small{font-size:13px;color:var(--fg-3);letter-spacing:0;margin-left:2px}
+.kpi .d{font:12px var(--mono);color:var(--fg-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:860px){
+  .kpis{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));
+    padding-inline:max(16px,env(safe-area-inset-left,0px));scroll-padding-inline:max(16px,env(safe-area-inset-left,0px))}
+  .kpis::-webkit-scrollbar{display:none}
+  .kpi{flex:0 0 42%;scroll-snap-align:start}
+}
+@media (max-width:420px){.kpi{flex-basis:56%}}
+
+/* Quotas */
+.quotas{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px 32px}
+.q .top{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.q .top .p{font-family:var(--mono)}
+.q .track{height:6px;background:var(--well);margin-top:8px;position:relative}
+.q .track span{position:absolute;inset:0 auto 0 0}
+.q .bot{display:flex;justify-content:space-between;gap:8px;font:11.5px var(--mono);color:var(--fg-3);margin-top:6px}
+
+/* Charts */
+.readout{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;min-height:22px;font:12.5px var(--mono);color:var(--fg-2);margin-bottom:10px}
+.readout .when{color:var(--fg)}
+.readout .it{display:inline-flex;align-items:center;gap:6px}
+.readout .it i{width:7px;height:7px}
+.chart{position:relative;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .b{opacity:.78}
+.chart .b.on{opacity:1}
+svg text{fill:var(--fg-3);font:11.5px var(--mono)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font:12px var(--mono);color:var(--fg-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:8px;height:8px}
+.legend .ma{width:14px;height:0;border-top:1.5px solid var(--fg)}
+
+.months{display:flex;flex-wrap:wrap;gap:20px 22px;min-height:150px;align-items:flex-end}
+.month{display:flex;flex-direction:column;gap:6px}
+.month .ml{font:11px var(--mono);color:var(--fg-3)}
+.month svg{display:block}
+.heat-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-top:14px;font:12px var(--mono);color:var(--fg-3)}
+.ramp{display:inline-flex;align-items:center;gap:3px}
+.ramp i{width:10px;height:10px}
+
+.rhythm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px 56px;align-items:start}
+@media (max-width:900px){.rhythm{grid-template-columns:minmax(0,1fr)}}
+.min0{min-width:0}
+
+/* Breakdown table */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl .pc{color:var(--fg-3);font-size:12px;margin-left:10px;display:inline-block;min-width:44px}
+.tbl .sbar{display:inline-block;vertical-align:middle;width:calc(100% - 58px)}
+.tbl th{font:500 11.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg-3);text-align:right;padding:0 0 8px 12px;border-bottom:1px solid var(--rule);white-space:nowrap}
+.tbl td{padding:12px 0 12px 16px;text-align:right;font-family:var(--mono);border-bottom:1px dashed var(--rule-2);white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left;padding-left:0}
+.tbl td:first-child{font-family:var(--sans)}
+.tbl .nm{display:flex;align-items:center;gap:8px}
+.tbl .nm i{width:8px;height:8px;flex:none}
+.tbl .nm small{display:block;color:var(--fg-3);font:11px var(--mono)}
+.tbl .share{width:26%;text-align:left}
+.tbl .sbar{height:4px;background:var(--well);position:relative}
+.tbl .sbar span{position:absolute;inset:0 auto 0 0}
+.tbl .est{color:var(--fg-3);font-size:11px;margin-left:4px}
+.tbl tr:last-child td{border-bottom:0}
+@media (max-width:640px){.tbl .opt{display:none}.tbl .share{width:28%}}
+.tblwrap{overflow-x:auto}
+
+.empty{font:12.5px var(--mono);color:var(--fg-3);padding:24px 0}
+footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--rule);font-size:12px;color:var(--fg-3);line-height:1.75;max-width:84ch}
+footer p{margin:0 0 6px}
+footer code{font-family:var(--mono);color:var(--fg-2)}
+</style>
+
+<div class="page">
+  <div class="bar">
+    <div class="bar-in">
+      <div class="brand"><b aria-hidden="true"></b>usage</div>
+      <div class="tabs src" id="srcTabs" role="group" aria-label="来源"></div>
+      <div class="tabs rng" id="rngTabs" role="group" aria-label="时间范围">
+        <button type="button" id="rg-all" data-r="all" aria-pressed="true">全部</button>
+        <button type="button" id="rg-30" data-r="30" aria-pressed="false">30 天</button>
+        <button type="button" id="rg-7" data-r="7" aria-pressed="false">7 天</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status" id="status">读取数据中</div>
+
+  <section class="hero">
+    <div>
+      <div class="metric-sw" role="group" aria-label="主指标">
+        <button type="button" id="mt-cost" data-m="cost" aria-pressed="true">费用</button>
+        <button type="button" id="mt-tok" data-m="tok" aria-pressed="false">token</button>
+      </div>
+      <div class="big" id="big">—</div>
+      <div class="hero-sub" id="heroSub"></div>
+      <div class="spark" id="spark"></div>
+    </div>
+    <div>
+      <div class="sh"><h2 id="compTitle">构成</h2><span class="aside" id="compAside"></span></div>
+      <div class="comp-bar" id="compBar" aria-hidden="true"></div>
+      <div class="comp" id="comp"></div>
+    </div>
+  </section>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section class="sec" id="quotaSec">
+    <div class="sh"><h2>订阅额度</h2><span class="aside" id="quotaAside"></span></div>
+    <div class="quotas" id="quotas"></div>
+  </section>
+
+  <section class="sec">
+    <div class="sh"><h2>每日</h2><div class="legend" id="dailyLegend"></div></div>
+    <div class="readout" id="dailyRead"></div>
+    <div class="chart" id="daily"></div>
+  </section>
+
+  <section class="sec">
+    <div class="rhythm">
+      <div class="min0">
+        <div class="sh"><h2>活动</h2><span class="aside" id="heatAside"></span></div>
+        <div class="months" id="months"></div>
+        <div class="heat-foot"><span id="heatRead">悬停或点按方格查看当天</span>
+          <span class="ramp">少<i style="background:var(--heat-0)"></i><i style="background:var(--heat-1)"></i><i style="background:var(--heat-2)"></i><i style="background:var(--heat-3)"></i><i style="background:var(--heat-4)"></i>多</span></div>
+      </div>
+      <div class="min0">
+        <div class="sh"><h2>节律</h2><span class="aside" id="punchAside"></span></div>
+        <div class="chart" id="punch"></div>
+        <div class="heat-foot"><span id="punchRead"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sh"><h2>明细</h2><span class="aside" id="tblAside"></span></div>
+    <div class="tblwrap"><table class="tbl" id="tbl"></table></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script type="application/json" id="sample">{"generated":"2026-10-24T09:12:00-05:00","timezone":"America/Chicago","currency":"USD","sample":true,"sources":[{"id":"claude-code","name":"Claude Code","kind":"logs","sample":"daily"},{"id":"codex","name":"Codex CLI","kind":"logs","sample":"all"},{"id":"anthropic-api","name":"Anthropic API","kind":"billing","sample":"all"}],"prices":{"verified":false,"per_mtok":{"claude-opus-5-5":[5,25,0.5,6.25],"claude-opus-5":[5,25,0.5,6.25],"claude-fable-5-1":[3,15,0.3,3.75],"claude-fable-5":[3,15,0.3,3.75],"claude-haiku-5-5":[1,5,0.1,1.25],"other":[3,15,0.3,3.75],"sample-model-a":[1.25,10,0.125,0],"sample-model-b":[0.25,2,0.025,0]}},"quotas":[{"name":"Claude Max","window":"5 \u5c0f\u65f6","used":0.34,"resets":"2026-10-24T12:00:00-05:00","sample":true},{"name":"Claude Max","window":"7 \u5929","used":0.71,"resets":"2026-10-27T07:00:00-05:00","sample":true},{"name":"Codex","window":"7 \u5929","used":0.22,"resets":"2026-10-29T00:00:00-05:00","sample":true}],"longest_session":{"src":"claude-code","ms":5258940000,"start":"2026-07-31"},"punch":{"claude-code":[[5,11,7,0,0,0,4,7,28,47,69,67,60,49,70,87,107,147,102,113,70,67,29,18],[4,9,8,0,0,0,3,12,18,45,51,90,52,56,76,76,102,144,130,111,80,71,42,13],[5,8,6,0,0,0,4,8,25,49,68,55,45,54,96,88,107,101,121,98,56,49,23,11],[5,10,8,0,0,0,5,11,24,44,69,60,72,86,84,120,134,164,121,120,85,51,29,20],[5,8,7,0,0,0,3,8,19,40,53,63,55,57,82,56,78,140,105,92,72,59,26,16],[2,6,3,0,0,0,2,6,13,20,32,46,26,28,51,53,52,49,68,34,46,31,20,9],[2,5,2,0,0,0,1,5,13,17,21,25,21,22,43,40,49,52,53,39,33,21,14,5]],"codex":[[0,0,0,0,0,0,0,1,3,5,11,7,4,7,11,8,11,6,6,4,2,1,0,0],[0,0,0,0,0,0,0,1,3,5,11,10,5,7,10,10,14,9,6,3,2,1,0,0],[0,0,0,0,0,0,0,1,3,6,9,10,5,9,11,12,13,8,6,3,2,1,0,0],[0,0,0,0,0,0,0,1,3,7,7,10,6,9,11,11,8,8,6,3,2,1,0,0],[0,0,0,0,0,0,0,1,3,4,6,7,5,6,10,11,7,8,5,3,1,1,0,0],[0,0,0,0,0,0,0,0,1,1,2,2,1,1,1,2,2,2,1,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,1,2,2,1,1,1,1,1,1,1,0,0,0,0,0]],"anthropic-api":[[5,5,4,4,3,4,5,9,13,11,11,19,13,17,14,19,19,10,9,8,10,8,9,6],[7,5,4,5,3,6,7,8,10,12,14,16,12,13,14,12,17,11,11,9,8,9,7,6],[5,6,6,4,5,5,5,10,14,11,15,14,13,11,20,14,18,13,13,8,9,8,5,7],[5,6,6,4,3,6,5,10,11,16,14,12,15,18,16,15,18,16,14,8,10,10,9,6],[7,6,4,4,3,5,5,8,11,11,13,19,10,18,18,19,14,13,8,9,11,10,7,6],[4,5,4,4,4,5,4,6,12,10,12,11,8,15,11,14,12,10,8,9,9,8,5,6],[4,5,5,3,2,5,6,8,12,14,16,14,14,11,13,13,10,11,8,6,5,6,4,6]]},"rows":[{"d":"2026-02-21","src":"claude-code","model":"claude-fable-5","in":1214,"out":272281,"cr":73472762,"cw":2208505,"sessions":2},{"d":"2026-02-21","src":"claude-code","model":"other","in":57755,"out":45682,"cr":15662406,"cw":832065,"sessions":0},{"d":"2026-07-29","src":"claude-code","model":"claude-fable-5","in":2018,"out":452543,"cr":122114841,"cw":3670628,"sessions":4},{"d":"2026-07-30","src":"claude-code","model":"claude-fable-5","in":1057,"out":237048,"cr":63965233,"cw":1922720,"sessions":2},{"d":"2026-07-31","src":"claude-code","model":"claude-fable-5","in":744,"out":166878,"cr":45030546,"cw":1353565,"sessions":10},{"d":"2026-07-31","src":"claude-code","model":"other","in":42764,"out":33825,"cr":11597038,"cw":616093,"sessions":0},{"d":"2026-08-01","src":"claude-code","model":"claude-fable-5","in":1084,"out":243133,"cr":65607429,"cw":1972082,"sessions":5},{"d":"2026-08-01","src":"claude-code","model":"other","in":86208,"out":68187,"cr":23378400,"cw":1241978,"sessions":0},{"d":"2026-08-02","src":"claude-code","model":"claude-fable-5","in":1432,"out":321016,"cr":86623428,"cw":2603798,"sessions":9},{"d":"2026-08-02","src":"claude-code","model":"other","in":19297,"out":15263,"cr":5233190,"cw":278013,"sessions":0},{"d":"2026-08-03","src":"claude-code","model":"claude-fable-5","in":1101,"out":246820,"cr":66602212,"cw":2001984,"sessions":4},{"d":"2026-08-03","src":"claude-code","model":"other","in":62838,"out":49702,"cr":17040735,"cw":905289,"sessions":0},{"d":"2026-08-05","src":"claude-code","model":"claude-fable-5","in":938,"out":210374,"cr":56767714,"cw":1706371,"sessions":4},{"d":"2026-08-05","src":"claude-code","model":"other","in":41299,"out":32666,"cr":11199835,"cw":594991,"sessions":0},{"d":"2026-08-07","src":"claude-code","model":"claude-fable-5","in":3290,"out":737609,"cr":199037280,"cw":5982826,"sessions":9},{"d":"2026-08-08","src":"claude-code","model":"claude-fable-5","in":890,"out":199445,"cr":53818627,"cw":1617725,"sessions":6},{"d":"2026-08-10","src":"claude-code","model":"claude-opus-5","in":280,"out":130063,"cr":44624128,"cw":2186582,"sessions":7},{"d":"2026-08-10","src":"claude-code","model":"claude-fable-5","in":559,"out":125340,"cr":33821810,"cw":1016644,"sessions":0},{"d":"2026-08-11","src":"claude-code","model":"claude-opus-5","in":1218,"out":565082,"cr":193877514,"cw":9499998,"sessions":5},{"d":"2026-08-11","src":"claude-code","model":"claude-fable-5","in":2540,"out":569386,"cr":153643940,"cw":4618356,"sessions":0},{"d":"2026-08-11","src":"claude-code","model":"other","in":7611,"out":6020,"cr":2063873,"cw":109643,"sessions":0},{"d":"2026-08-12","src":"claude-code","model":"claude-opus-5","in":1039,"out":482243,"cr":165455888,"cw":8107339,"sessions":8},{"d":"2026-08-12","src":"claude-code","model":"claude-fable-5","in":994,"out":222756,"cr":60108645,"cw":1806795,"sessions":0},{"d":"2026-08-12","src":"claude-code","model":"other","in":25671,"out":20304,"cr":6961503,"cw":369830,"sessions":0},{"d":"2026-08-13","src":"claude-code","model":"claude-opus-5","in":569,"out":264114,"cr":90616677,"cw":4440217,"sessions":7},{"d":"2026-08-13","src":"claude-code","model":"claude-fable-5","in":1491,"out":334315,"cr":90212110,"cw":2711670,"sessions":0},{"d":"2026-08-13","src":"claude-code","model":"other","in":44909,"out":35521,"cr":12178736,"cw":646995,"sessions":0},{"d":"2026-08-14","src":"claude-code","model":"claude-opus-5","in":1503,"out":697433,"cr":239286652,"cw":11725046,"sessions":9},{"d":"2026-08-14","src":"claude-code","model":"claude-fable-5","in":376,"out":84388,"cr":22771240,"cw":684477,"sessions":0},{"d":"2026-08-15","src":"claude-code","model":"claude-opus-5","in":1015,"out":471237,"cr":161679562,"cw":7922299,"sessions":9},{"d":"2026-08-15","src":"claude-code","model":"claude-fable-5","in":1583,"out":354852,"cr":95753827,"cw":2878247,"sessions":0},{"d":"2026-08-16","src":"claude-code","model":"claude-opus-5","in":1990,"out":923592,"cr":316881009,"cw":15527169,"sessions":3},{"d":"2026-08-16","src":"claude-code","model":"claude-fable-5","in":542,"out":121480,"cr":32780227,"cw":985335,"sessions":0},{"d":"2026-08-16","src":"claude-code","model":"other","in":81248,"out":64264,"cr":22033302,"cw":1170519,"sessions":0},{"d":"2026-08-17","src":"claude-code","model":"claude-opus-5","in":901,"out":417998,"cr":143413545,"cw":7027264,"sessions":10},{"d":"2026-08-17","src":"claude-code","model":"claude-fable-5","in":1040,"out":233277,"cr":62947808,"cw":1892137,"sessions":0},{"d":"2026-08-18","src":"claude-code","model":"claude-opus-5","in":1361,"out":631730,"cr":216744321,"cw":10620472,"sessions":5},{"d":"2026-08-18","src":"claude-code","model":"claude-fable-5","in":950,"out":212924,"cr":57455724,"cw":1727051,"sessions":0},{"d":"2026-08-18","src":"claude-code","model":"other","in":8005,"out":6332,"cr":2170820,"cw":115325,"sessions":0},{"d":"2026-08-19","src":"claude-code","model":"claude-opus-5","in":954,"out":442713,"cr":151893178,"cw":7442766,"sessions":8},{"d":"2026-08-19","src":"claude-code","model":"claude-fable-5","in":834,"out":186897,"cr":50432641,"cw":1515946,"sessions":0},{"d":"2026-08-21","src":"claude-code","model":"claude-opus-5","in":2502,"out":1161142,"cr":398383352,"cw":19520784,"sessions":6},{"d":"2026-08-21","src":"claude-code","model":"claude-fable-5","in":1037,"out":232488,"cr":62734931,"cw":1885738,"sessions":0},{"d":"2026-08-21","src":"claude-code","model":"other","in":31873,"out":25210,"cr":8643403,"cw":459181,"sessions":0},{"d":"2026-08-22","src":"claude-code","model":"claude-opus-5","in":817,"out":379351,"cr":130153753,"cw":6377534,"sessions":5},{"d":"2026-08-22","src":"claude-code","model":"claude-fable-5","in":513,"out":115079,"cr":31053110,"cw":933420,"sessions":0},{"d":"2026-08-24","src":"claude-code","model":"claude-opus-5","in":1377,"out":639222,"cr":219314704,"cw":10746420,"sessions":9},{"d":"2026-08-24","src":"claude-code","model":"claude-fable-5","in":1872,"out":419669,"cr":113243915,"cw":3403979,"sessions":0},{"d":"2026-08-26","src":"claude-code","model":"claude-opus-5","in":958,"out":444420,"cr":152478736,"cw":7471458,"sessions":11},{"d":"2026-08-26","src":"claude-code","model":"other","in":9988,"out":7900,"cr":2708686,"cw":143899,"sessions":0},{"d":"2026-08-27","src":"claude-code","model":"claude-opus-5","in":1056,"out":489945,"cr":168098204,"cw":8236812,"sessions":3},{"d":"2026-08-27","src":"claude-code","model":"other","in":44135,"out":34909,"cr":11968860,"cw":635846,"sessions":0},{"d":"2026-08-28","src":"claude-code","model":"claude-opus-5","in":3464,"out":1607594,"cr":551559332,"cw":27026407,"sessions":6},{"d":"2026-08-28","src":"claude-code","model":"claude-fable-5-1","in":103356,"out":256041,"cr":58724935,"cw":2722488,"sessions":0},{"d":"2026-08-29","src":"claude-code","model":"claude-opus-5","in":379,"out":175705,"cr":60283762,"cw":2953904,"sessions":9},{"d":"2026-08-29","src":"claude-code","model":"claude-fable-5-1","in":215559,"out":533998,"cr":122476611,"cw":5678016,"sessions":0},{"d":"2026-08-29","src":"claude-code","model":"other","in":14100,"out":11153,"cr":3823812,"cw":203140,"sessions":0},{"d":"2026-08-30","src":"claude-code","model":"claude-opus-5","in":406,"out":188633,"cr":64719393,"cw":3171250,"sessions":9},{"d":"2026-08-30","src":"claude-code","model":"claude-fable-5-1","in":406228,"out":1006337,"cr":230811318,"cw":10700413,"sessions":0},{"d":"2026-08-31","src":"claude-code","model":"claude-opus-5","in":2896,"out":1343963,"cr":461108685,"cw":22594326,"sessions":11},{"d":"2026-08-31","src":"claude-code","model":"claude-fable-5-1","in":314112,"out":778142,"cr":178473006,"cw":8274009,"sessions":0},{"d":"2026-09-02","src":"claude-code","model":"claude-opus-5","in":1417,"out":657811,"cr":225692333,"cw":11058924,"sessions":6},{"d":"2026-09-02","src":"claude-code","model":"claude-fable-5-1","in":126739,"out":313966,"cr":72010621,"cw":3338412,"sessions":0},{"d":"2026-09-02","src":"claude-code","model":"other","in":64461,"out":50986,"cr":17480938,"cw":928675,"sessions":0},{"d":"2026-09-04","src":"claude-code","model":"claude-opus-5","in":697,"out":323682,"cr":111053907,"cw":5441641,"sessions":2},{"d":"2026-09-04","src":"claude-code","model":"claude-fable-5-1","in":336836,"out":834436,"cr":191384332,"cw":8872578,"sessions":0},{"d":"2026-09-04","src":"claude-code","model":"other","in":33340,"out":26371,"cr":9041315,"cw":480320,"sessions":0},{"d":"2026-09-05","src":"claude-code","model":"claude-opus-5","in":1546,"out":717359,"cr":246123057,"cw":12060030,"sessions":10},{"d":"2026-09-05","src":"claude-code","model":"claude-fable-5-1","in":206872,"out":512479,"cr":117541066,"cw":5449204,"sessions":0},{"d":"2026-09-05","src":"claude-code","model":"other","in":29370,"out":23231,"cr":7964794,"cw":423130,"sessions":0},{"d":"2026-09-07","src":"claude-code","model":"claude-opus-5","in":496,"out":230376,"cr":79041297,"cw":3873024,"sessions":10},{"d":"2026-09-07","src":"claude-code","model":"claude-fable-5-1","in":204995,"out":507828,"cr":116474210,"cw":5399744,"sessions":0},{"d":"2026-09-07","src":"claude-code","model":"other","in":29986,"out":23718,"cr":8131825,"cw":432003,"sessions":0},{"d":"2026-09-08","src":"claude-code","model":"claude-opus-5","in":3692,"out":1713528,"cr":587904913,"cw":28807341,"sessions":7},{"d":"2026-09-08","src":"claude-code","model":"claude-fable-5-1","in":259012,"out":641644,"cr":147165947,"cw":6822613,"sessions":0},{"d":"2026-09-08","src":"claude-code","model":"other","in":83316,"out":65899,"cr":22594048,"cw":1200309,"sessions":0},{"d":"2026-09-09","src":"claude-code","model":"claude-opus-5","in":940,"out":436164,"cr":149646074,"cw":7332658,"sessions":6},{"d":"2026-09-09","src":"claude-code","model":"claude-fable-5-1","in":814569,"out":2017909,"cr":462823237,"cw":21456485,"sessions":0},{"d":"2026-09-09","src":"claude-code","model":"other","in":1039,"out":822,"cr":281779,"cw":14970,"sessions":0},{"d":"2026-09-11","src":"claude-code","model":"claude-opus-5","in":3883,"out":1802156,"cr":618312963,"cw":30297335,"sessions":6},{"d":"2026-09-11","src":"claude-code","model":"claude-fable-5-1","in":202365,"out":501313,"cr":114979986,"cw":5330472,"sessions":0},{"d":"2026-09-12","src":"claude-code","model":"claude-opus-5","in":1126,"out":522506,"cr":179269799,"cw":8784220,"sessions":9},{"d":"2026-09-12","src":"claude-code","model":"claude-fable-5-1","in":52047,"out":128934,"cr":29572009,"cw":1370958,"sessions":0},{"d":"2026-09-12","src":"claude-code","model":"other","in":5760,"out":4556,"cr":1562008,"cw":82982,"sessions":0},{"d":"2026-09-13","src":"claude-code","model":"claude-opus-5","in":1254,"out":582124,"cr":199724554,"cw":9786503,"sessions":4},{"d":"2026-09-13","src":"claude-code","model":"other","in":77118,"out":60998,"cr":20913485,"cw":1111029,"sessions":0},{"d":"2026-09-14","src":"claude-code","model":"claude-opus-5","in":2865,"out":1329403,"cr":456113153,"cw":22349545,"sessions":3},{"d":"2026-09-14","src":"claude-code","model":"other","in":82033,"out":64885,"cr":22246307,"cw":1181835,"sessions":0},{"d":"2026-09-16","src":"claude-code","model":"claude-opus-5","in":1903,"out":883286,"cr":303052158,"cw":14849556,"sessions":11},{"d":"2026-09-17","src":"claude-code","model":"claude-opus-5","in":1478,"out":685955,"cr":235348425,"cw":11532073,"sessions":3},{"d":"2026-09-18","src":"claude-code","model":"claude-opus-5","in":2896,"out":1343953,"cr":461105382,"cw":22594164,"sessions":9},{"d":"2026-09-18","src":"claude-code","model":"other","in":4576,"out":3619,"cr":1240847,"cw":65920,"sessions":0},{"d":"2026-09-19","src":"claude-code","model":"claude-opus-5","in":2619,"out":1215518,"cr":417039590,"cw":20434940,"sessions":8},{"d":"2026-09-20","src":"claude-code","model":"claude-opus-5-5","in":2151,"out":994753,"cr":372116776,"cw":7408640,"sessions":9},{"d":"2026-09-22","src":"claude-code","model":"claude-opus-5-5","in":2749,"out":1271448,"cr":475622654,"cw":9469385,"sessions":10},{"d":"2026-09-22","src":"claude-code","model":"other","in":86078,"out":68084,"cr":23343053,"cw":1240100,"sessions":0},{"d":"2026-09-23","src":"claude-code","model":"claude-opus-5-5","in":3339,"out":1544526,"cr":577775530,"cw":11503192,"sessions":3},{"d":"2026-09-23","src":"claude-code","model":"other","in":27976,"out":22128,"cr":7586825,"cw":403050,"sessions":0},{"d":"2026-09-24","src":"claude-code","model":"claude-opus-5-5","in":13962,"out":6457874,"cr":2415758341,"cw":48096417,"sessions":9},{"d":"2026-09-25","src":"claude-code","model":"claude-opus-5-5","in":4557,"out":2107993,"cr":788556960,"cw":15699734,"sessions":2},{"d":"2026-09-26","src":"claude-code","model":"claude-opus-5-5","in":879,"out":406605,"cr":152102423,"cw":3028275,"sessions":3},{"d":"2026-09-26","src":"claude-code","model":"other","in":2572,"out":2034,"cr":697411,"cw":37050,"sessions":0},{"d":"2026-09-27","src":"claude-code","model":"claude-opus-5-5","in":1562,"out":722643,"cr":270325958,"cw":5382041,"sessions":7},{"d":"2026-09-28","src":"claude-code","model":"claude-opus-5-5","in":7445,"out":3443622,"cr":1288188315,"cw":25647119,"sessions":2},{"d":"2026-09-28","src":"claude-code","model":"other","in":77629,"out":61401,"cr":21051817,"cw":1118378,"sessions":0},{"d":"2026-09-29","src":"claude-code","model":"claude-opus-5-5","in":5571,"out":2576965,"cr":963989925,"cw":19192508,"sessions":8},{"d":"2026-09-30","src":"claude-code","model":"claude-opus-5-5","in":8354,"out":3863898,"cr":1445405027,"cw":28777217,"sessions":10},{"d":"2026-09-30","src":"claude-code","model":"other","in":7143,"out":5650,"cr":1937009,"cw":102904,"sessions":0},{"d":"2026-10-01","src":"claude-code","model":"claude-opus-5-5","in":8782,"out":4062081,"cr":1519541521,"cw":30253234,"sessions":7},{"d":"2026-10-02","src":"claude-code","model":"claude-opus-5-5","in":3476,"out":1607777,"cr":601436433,"cw":11974268,"sessions":7},{"d":"2026-10-02","src":"claude-code","model":"other","in":54509,"out":43114,"cr":14782082,"cw":785298,"sessions":0},{"d":"2026-10-03","src":"claude-code","model":"claude-opus-5-5","in":3832,"out":1772607,"cr":663096111,"cw":13201878,"sessions":6},{"d":"2026-10-03","src":"claude-code","model":"other","in":77075,"out":60963,"cr":20901631,"cw":1110399,"sessions":0},{"d":"2026-10-04","src":"claude-code","model":"claude-opus-5-5","in":3100,"out":1433860,"cr":536377604,"cw":10678982,"sessions":9},{"d":"2026-10-04","src":"claude-code","model":"other","in":80836,"out":63938,"cr":21921531,"cw":1164581,"sessions":0},{"d":"2026-10-05","src":"claude-code","model":"claude-opus-5-5","in":5833,"out":2698073,"cr":1009293723,"cw":20094482,"sessions":3},{"d":"2026-10-06","src":"claude-code","model":"claude-opus-5-5","in":6939,"out":3209329,"cr":1200544267,"cw":23902175,"sessions":5},{"d":"2026-10-06","src":"claude-code","model":"other","in":36776,"out":29088,"cr":9973089,"cw":529820,"sessions":0},{"d":"2026-10-07","src":"claude-code","model":"claude-opus-5-5","in":28158,"out":13023942,"cr":4871989934,"cw":96998634,"sessions":10},{"d":"2026-10-07","src":"claude-code","model":"other","in":22670,"out":17931,"cr":6147868,"cw":326605,"sessions":0},{"d":"2026-10-08","src":"claude-code","model":"claude-opus-5-5","in":4511,"out":2086655,"cr":780574942,"cw":15540817,"sessions":4},{"d":"2026-10-09","src":"claude-code","model":"claude-opus-5-5","in":1945,"out":899835,"cr":336609744,"cw":6701714,"sessions":4},{"d":"2026-10-10","src":"claude-code","model":"claude-opus-5-5","in":2225,"out":1028944,"cr":384906719,"cw":7663281,"sessions":9},{"d":"2026-10-10","src":"claude-code","model":"other","in":21156,"out":16734,"cr":5737331,"cw":304796,"sessions":0},{"d":"2026-10-11","src":"claude-code","model":"claude-opus-5-5","in":3603,"out":1666532,"cr":623415496,"cw":12411859,"sessions":2},{"d":"2026-10-11","src":"claude-code","model":"other","in":59292,"out":46898,"cr":16079286,"cw":854212,"sessions":0},{"d":"2026-10-12","src":"claude-code","model":"claude-opus-5-5","in":3183,"out":1472152,"cr":550701979,"cw":10964173,"sessions":7},{"d":"2026-10-12","src":"claude-code","model":"other","in":57017,"out":45098,"cr":15462175,"cw":821428,"sessions":0},{"d":"2026-10-14","src":"claude-code","model":"claude-opus-5-5","in":263,"out":121705,"cr":45527420,"cw":906426,"sessions":11},{"d":"2026-10-14","src":"claude-code","model":"other","in":44376,"out":35100,"cr":12034171,"cw":639315,"sessions":0},{"d":"2026-10-15","src":"claude-code","model":"claude-opus-5-5","in":993,"out":459234,"cr":171790187,"cw":3420248,"sessions":4},{"d":"2026-10-15","src":"claude-code","model":"claude-fable-5-1","in":451877,"out":1119423,"cr":256748467,"cw":11902859,"sessions":0},{"d":"2026-10-16","src":"claude-code","model":"claude-opus-5-5","in":2328,"out":1076926,"cr":402856135,"cw":8020644,"sessions":5},{"d":"2026-10-16","src":"claude-code","model":"claude-fable-5-1","in":604158,"out":1496663,"cr":343271336,"cw":15914059,"sessions":0},{"d":"2026-10-17","src":"claude-code","model":"claude-opus-5-5","in":3068,"out":1418932,"cr":530793472,"cw":10567805,"sessions":9},{"d":"2026-10-17","src":"claude-code","model":"claude-fable-5-1","in":101276,"out":250887,"cr":57542919,"cw":2667690,"sessions":0},{"d":"2026-10-17","src":"claude-code","model":"other","in":29504,"out":23337,"cr":8001090,"cw":425058,"sessions":0},{"d":"2026-10-18","src":"claude-code","model":"claude-opus-5-5","in":1257,"out":581378,"cr":217481728,"cw":4329941,"sessions":4},{"d":"2026-10-20","src":"claude-code","model":"claude-opus-5-5","in":1820,"out":841845,"cr":314916997,"cw":6269824,"sessions":7},{"d":"2026-10-20","src":"claude-code","model":"other","in":48558,"out":38408,"cr":13168355,"cw":699569,"sessions":0},{"d":"2026-10-21","src":"claude-code","model":"claude-opus-5-5","in":4633,"out":2142913,"cr":801619870,"cw":15959810,"sessions":7},{"d":"2026-10-21","src":"claude-code","model":"other","in":15486,"out":12249,"cr":4199541,"cw":223101,"sessions":0},{"d":"2026-10-22","src":"claude-code","model":"claude-opus-5-5","in":2003,"out":926320,"cr":346517497,"cw":6898972,"sessions":2},{"d":"2026-10-23","src":"claude-code","model":"claude-opus-5-5","in":3098,"out":1433153,"cr":536113188,"cw":10673718,"sessions":6},{"d":"2026-10-23","src":"claude-code","model":"other","in":32648,"out":25824,"cr":8853789,"cw":470358,"sessions":0},{"d":"2026-10-24","src":"claude-code","model":"claude-opus-5-5","in":1179,"out":545481,"cr":204053121,"cw":4062585,"sessions":2},{"d":"2026-09-14","src":"codex","model":"sample-model-a","in":5433721,"out":701855,"cr":47545065,"cw":0,"sessions":2},{"d":"2026-09-15","src":"codex","model":"sample-model-a","in":3348017,"out":432452,"cr":29295153,"cw":0,"sessions":3},{"d":"2026-09-16","src":"codex","model":"sample-model-a","in":3378906,"out":436442,"cr":29565434,"cw":0,"sessions":4},{"d":"2026-09-16","src":"codex","model":"sample-model-b","in":1268415,"out":163837,"cr":11098635,"cw":0,"sessions":2},{"d":"2026-09-17","src":"codex","model":"sample-model-a","in":6367891,"out":822519,"cr":55719051,"cw":0,"sessions":4},{"d":"2026-09-17","src":"codex","model":"sample-model-b","in":943648,"out":121887,"cr":8256926,"cw":0,"sessions":2},{"d":"2026-09-18","src":"codex","model":"sample-model-a","in":3266101,"out":421871,"cr":28578386,"cw":0,"sessions":3},{"d":"2026-09-18","src":"codex","model":"sample-model-b","in":1818680,"out":234912,"cr":15913451,"cw":0,"sessions":1},{"d":"2026-09-19","src":"codex","model":"sample-model-a","in":1622686,"out":209597,"cr":14198509,"cw":0,"sessions":1},{"d":"2026-09-19","src":"codex","model":"sample-model-b","in":666981,"out":86151,"cr":5836085,"cw":0,"sessions":1},{"d":"2026-09-21","src":"codex","model":"sample-model-a","in":5452179,"out":704239,"cr":47706573,"cw":0,"sessions":1},{"d":"2026-09-21","src":"codex","model":"sample-model-b","in":323354,"out":41766,"cr":2829349,"cw":0,"sessions":3},{"d":"2026-09-24","src":"codex","model":"sample-model-a","in":1424334,"out":183976,"cr":12462929,"cw":0,"sessions":1},{"d":"2026-09-25","src":"codex","model":"sample-model-a","in":3023410,"out":390523,"cr":26454840,"cw":0,"sessions":2},{"d":"2026-09-25","src":"codex","model":"sample-model-b","in":1354360,"out":174938,"cr":11850652,"cw":0,"sessions":4},{"d":"2026-09-30","src":"codex","model":"sample-model-a","in":416656,"out":53818,"cr":3645748,"cw":0,"sessions":2},{"d":"2026-10-01","src":"codex","model":"sample-model-a","in":2606913,"out":336726,"cr":22810494,"cw":0,"sessions":2},{"d":"2026-10-03","src":"codex","model":"sample-model-a","in":1914039,"out":247230,"cr":16747843,"cw":0,"sessions":1},{"d":"2026-10-04","src":"codex","model":"sample-model-b","in":970158,"out":125312,"cr":8488885,"cw":0,"sessions":4},{"d":"2026-10-05","src":"codex","model":"sample-model-b","in":1015813,"out":131209,"cr":8888363,"cw":0,"sessions":2},{"d":"2026-10-07","src":"codex","model":"sample-model-a","in":6473529,"out":836164,"cr":56643386,"cw":0,"sessions":4},{"d":"2026-10-09","src":"codex","model":"sample-model-b","in":692823,"out":89489,"cr":6062203,"cw":0,"sessions":4},{"d":"2026-10-13","src":"codex","model":"sample-model-a","in":2826182,"out":365048,"cr":24729097,"cw":0,"sessions":2},{"d":"2026-10-13","src":"codex","model":"sample-model-b","in":395410,"out":51073,"cr":3459842,"cw":0,"sessions":2},{"d":"2026-10-17","src":"codex","model":"sample-model-b","in":1417339,"out":183073,"cr":12401720,"cw":0,"sessions":2},{"d":"2026-10-18","src":"codex","model":"sample-model-a","in":2305015,"out":297731,"cr":20168887,"cw":0,"sessions":3},{"d":"2026-10-18","src":"codex","model":"sample-model-b","in":784898,"out":101382,"cr":6867861,"cw":0,"sessions":3},{"d":"2026-10-21","src":"codex","model":"sample-model-a","in":3176876,"out":410346,"cr":27797672,"cw":0,"sessions":3},{"d":"2026-10-21","src":"codex","model":"sample-model-b","in":1617719,"out":208955,"cr":14155042,"cw":0,"sessions":1},{"d":"2026-10-22","src":"codex","model":"sample-model-a","in":2955626,"out":381768,"cr":25861728,"cw":0,"sessions":1},{"d":"2026-10-22","src":"codex","model":"sample-model-b","in":253431,"out":32734,"cr":2217524,"cw":0,"sessions":3},{"d":"2026-10-23","src":"codex","model":"sample-model-a","in":1555923,"out":200973,"cr":13614329,"cw":0,"sessions":4},{"d":"2026-10-23","src":"codex","model":"sample-model-b","in":1026860,"out":132636,"cr":8985027,"cw":0,"sessions":2},{"d":"2026-10-24","src":"codex","model":"sample-model-b","in":1157781,"out":149546,"cr":10130587,"cw":0,"sessions":1},{"d":"2026-08-20","src":"anthropic-api","model":"claude-opus-5-5","in":818349,"out":100020,"cr":0,"cw":0,"requests":63,"cost":6.59},{"d":"2026-08-20","src":"anthropic-api","model":"claude-haiku-5-5","in":4797797,"out":586397,"cr":0,"cw":0,"requests":373,"cost":7.73},{"d":"2026-08-21","src":"anthropic-api","model":"claude-opus-5-5","in":3756529,"out":459131,"cr":0,"cw":0,"requests":292,"cost":30.26},{"d":"2026-08-21","src":"anthropic-api","model":"claude-haiku-5-5","in":3100449,"out":378943,"cr":0,"cw":0,"requests":241,"cost":5.0},{"d":"2026-08-22","src":"anthropic-api","model":"claude-opus-5-5","in":3235289,"out":395424,"cr":0,"cw":0,"requests":251,"cost":26.06},{"d":"2026-08-22","src":"anthropic-api","model":"claude-haiku-5-5","in":5913230,"out":722728,"cr":0,"cw":0,"requests":459,"cost":9.53},{"d":"2026-08-23","src":"anthropic-api","model":"claude-opus-5-5","in":1350202,"out":165024,"cr":0,"cw":0,"requests":105,"cost":10.88},{"d":"2026-08-23","src":"anthropic-api","model":"claude-haiku-5-5","in":1319375,"out":161256,"cr":0,"cw":0,"requests":102,"cost":2.13},{"d":"2026-08-26","src":"anthropic-api","model":"claude-opus-5-5","in":2457085,"out":300310,"cr":0,"cw":0,"requests":191,"cost":19.79},{"d":"2026-08-26","src":"anthropic-api","model":"claude-haiku-5-5","in":3232326,"out":395062,"cr":0,"cw":0,"requests":251,"cost":5.21},{"d":"2026-08-27","src":"anthropic-api","model":"claude-opus-5-5","in":1459231,"out":178350,"cr":0,"cw":0,"requests":113,"cost":11.75},{"d":"2026-08-27","src":"anthropic-api","model":"claude-haiku-5-5","in":7572474,"out":925524,"cr":0,"cw":0,"requests":588,"cost":12.2},{"d":"2026-08-28","src":"anthropic-api","model":"claude-opus-5-5","in":2106993,"out":257521,"cr":0,"cw":0,"requests":163,"cost":16.97},{"d":"2026-08-28","src":"anthropic-api","model":"claude-haiku-5-5","in":6650454,"out":812833,"cr":0,"cw":0,"requests":517,"cost":10.71},{"d":"2026-08-29","src":"anthropic-api","model":"claude-opus-5-5","in":2226575,"out":272136,"cr":0,"cw":0,"requests":173,"cost":17.94},{"d":"2026-08-29","src":"anthropic-api","model":"claude-haiku-5-5","in":3150371,"out":385045,"cr":0,"cw":0,"requests":245,"cost":5.08},{"d":"2026-08-30","src":"anthropic-api","model":"claude-opus-5-5","in":2205818,"out":269600,"cr":0,"cw":0,"requests":171,"cost":17.77},{"d":"2026-08-30","src":"anthropic-api","model":"claude-haiku-5-5","in":1421339,"out":173719,"cr":0,"cw":0,"requests":110,"cost":2.29},{"d":"2026-08-31","src":"anthropic-api","model":"claude-opus-5-5","in":5852514,"out":715307,"cr":0,"cw":0,"requests":455,"cost":47.15},{"d":"2026-08-31","src":"anthropic-api","model":"claude-haiku-5-5","in":2186380,"out":267224,"cr":0,"cw":0,"requests":170,"cost":3.52},{"d":"2026-09-01","src":"anthropic-api","model":"claude-opus-5-5","in":1593006,"out":194700,"cr":0,"cw":0,"requests":123,"cost":12.83},{"d":"2026-09-01","src":"anthropic-api","model":"claude-haiku-5-5","in":2163732,"out":264456,"cr":0,"cw":0,"requests":168,"cost":3.49},{"d":"2026-09-02","src":"anthropic-api","model":"claude-opus-5-5","in":1856699,"out":226929,"cr":0,"cw":0,"requests":144,"cost":14.96},{"d":"2026-09-02","src":"anthropic-api","model":"claude-haiku-5-5","in":1559512,"out":190607,"cr":0,"cw":0,"requests":121,"cost":2.51},{"d":"2026-09-03","src":"anthropic-api","model":"claude-opus-5-5","in":3876586,"out":473805,"cr":0,"cw":0,"requests":301,"cost":31.23},{"d":"2026-09-03","src":"anthropic-api","model":"claude-haiku-5-5","in":12189403,"out":1489815,"cr":0,"cw":0,"requests":948,"cost":19.64},{"d":"2026-09-04","src":"anthropic-api","model":"claude-opus-5-5","in":880306,"out":107593,"cr":0,"cw":0,"requests":68,"cost":7.09},{"d":"2026-09-04","src":"anthropic-api","model":"claude-haiku-5-5","in":3778028,"out":461758,"cr":0,"cw":0,"requests":293,"cost":6.09},{"d":"2026-09-06","src":"anthropic-api","model":"claude-opus-5-5","in":2342218,"out":286271,"cr":0,"cw":0,"requests":182,"cost":18.87},{"d":"2026-09-06","src":"anthropic-api","model":"claude-haiku-5-5","in":6829187,"out":834678,"cr":0,"cw":0,"requests":531,"cost":11.0},{"d":"2026-09-07","src":"anthropic-api","model":"claude-opus-5-5","in":1252664,"out":153103,"cr":0,"cw":0,"requests":97,"cost":10.09},{"d":"2026-09-07","src":"anthropic-api","model":"claude-haiku-5-5","in":2696123,"out":329526,"cr":0,"cw":0,"requests":209,"cost":4.34},{"d":"2026-09-08","src":"anthropic-api","model":"claude-opus-5-5","in":2974649,"out":363568,"cr":0,"cw":0,"requests":231,"cost":23.96},{"d":"2026-09-08","src":"anthropic-api","model":"claude-haiku-5-5","in":4518958,"out":552317,"cr":0,"cw":0,"requests":351,"cost":7.28},{"d":"2026-09-09","src":"anthropic-api","model":"claude-opus-5-5","in":1640138,"out":200461,"cr":0,"cw":0,"requests":127,"cost":13.21},{"d":"2026-09-09","src":"anthropic-api","model":"claude-haiku-5-5","in":7132609,"out":871763,"cr":0,"cw":0,"requests":554,"cost":11.49},{"d":"2026-09-10","src":"anthropic-api","model":"claude-opus-5-5","in":1689801,"out":206531,"cr":0,"cw":0,"requests":131,"cost":13.61},{"d":"2026-09-10","src":"anthropic-api","model":"claude-haiku-5-5","in":4926979,"out":602186,"cr":0,"cw":0,"requests":383,"cost":7.94},{"d":"2026-09-11","src":"anthropic-api","model":"claude-opus-5-5","in":3672775,"out":448894,"cr":0,"cw":0,"requests":285,"cost":29.59},{"d":"2026-09-11","src":"anthropic-api","model":"claude-haiku-5-5","in":5909900,"out":722321,"cr":0,"cw":0,"requests":459,"cost":9.52},{"d":"2026-09-12","src":"anthropic-api","model":"claude-opus-5-5","in":2238004,"out":273533,"cr":0,"cw":0,"requests":174,"cost":18.03},{"d":"2026-09-12","src":"anthropic-api","model":"claude-haiku-5-5","in":6676594,"out":816028,"cr":0,"cw":0,"requests":519,"cost":10.76},{"d":"2026-09-13","src":"anthropic-api","model":"claude-opus-5-5","in":3440527,"out":420508,"cr":0,"cw":0,"requests":267,"cost":27.72},{"d":"2026-09-13","src":"anthropic-api","model":"claude-haiku-5-5","in":2487831,"out":304068,"cr":0,"cw":0,"requests":193,"cost":4.01},{"d":"2026-09-14","src":"anthropic-api","model":"claude-opus-5-5","in":953510,"out":116540,"cr":0,"cw":0,"requests":74,"cost":7.68},{"d":"2026-09-14","src":"anthropic-api","model":"claude-haiku-5-5","in":5150197,"out":629468,"cr":0,"cw":0,"requests":400,"cost":8.3},{"d":"2026-09-16","src":"anthropic-api","model":"claude-opus-5-5","in":1221550,"out":149300,"cr":0,"cw":0,"requests":95,"cost":9.84},{"d":"2026-09-16","src":"anthropic-api","model":"claude-haiku-5-5","in":4128719,"out":504621,"cr":0,"cw":0,"requests":321,"cost":6.65},{"d":"2026-09-18","src":"anthropic-api","model":"claude-opus-5-5","in":1862963,"out":227695,"cr":0,"cw":0,"requests":144,"cost":15.01},{"d":"2026-09-18","src":"anthropic-api","model":"claude-haiku-5-5","in":9866443,"out":1205898,"cr":0,"cw":0,"requests":767,"cost":15.9},{"d":"2026-09-19","src":"anthropic-api","model":"claude-opus-5-5","in":1153882,"out":141030,"cr":0,"cw":0,"requests":89,"cost":9.3},{"d":"2026-09-19","src":"anthropic-api","model":"claude-haiku-5-5","in":6934580,"out":847559,"cr":0,"cw":0,"requests":539,"cost":11.17},{"d":"2026-09-20","src":"anthropic-api","model":"claude-opus-5-5","in":1783791,"out":218018,"cr":0,"cw":0,"requests":138,"cost":14.37},{"d":"2026-09-20","src":"anthropic-api","model":"claude-haiku-5-5","in":9607316,"out":1174227,"cr":0,"cw":0,"requests":747,"cost":15.48},{"d":"2026-09-22","src":"anthropic-api","model":"claude-opus-5-5","in":1043048,"out":127483,"cr":0,"cw":0,"requests":81,"cost":8.4},{"d":"2026-09-22","src":"anthropic-api","model":"claude-haiku-5-5","in":5800450,"out":708944,"cr":0,"cw":0,"requests":451,"cost":9.35},{"d":"2026-09-23","src":"anthropic-api","model":"claude-opus-5-5","in":1798804,"out":219853,"cr":0,"cw":0,"requests":139,"cost":14.49},{"d":"2026-09-23","src":"anthropic-api","model":"claude-haiku-5-5","in":10033143,"out":1226273,"cr":0,"cw":0,"requests":780,"cost":16.16},{"d":"2026-09-24","src":"anthropic-api","model":"claude-opus-5-5","in":7479103,"out":914112,"cr":0,"cw":0,"requests":581,"cost":60.25},{"d":"2026-09-24","src":"anthropic-api","model":"claude-haiku-5-5","in":9300444,"out":1136721,"cr":0,"cw":0,"requests":723,"cost":14.98},{"d":"2026-09-25","src":"anthropic-api","model":"claude-opus-5-5","in":3516654,"out":429813,"cr":0,"cw":0,"requests":273,"cost":28.33},{"d":"2026-09-25","src":"anthropic-api","model":"claude-haiku-5-5","in":3306379,"out":404113,"cr":0,"cw":0,"requests":257,"cost":5.33},{"d":"2026-09-26","src":"anthropic-api","model":"claude-opus-5-5","in":1961780,"out":239773,"cr":0,"cw":0,"requests":152,"cost":15.8},{"d":"2026-09-26","src":"anthropic-api","model":"claude-haiku-5-5","in":11708162,"out":1430997,"cr":0,"cw":0,"requests":910,"cost":18.86},{"d":"2026-09-27","src":"anthropic-api","model":"claude-opus-5-5","in":903590,"out":110438,"cr":0,"cw":0,"requests":70,"cost":7.28},{"d":"2026-09-27","src":"anthropic-api","model":"claude-haiku-5-5","in":6822063,"out":833807,"cr":0,"cw":0,"requests":530,"cost":10.99},{"d":"2026-09-28","src":"anthropic-api","model":"claude-opus-5-5","in":1346724,"out":164599,"cr":0,"cw":0,"requests":104,"cost":10.85},{"d":"2026-09-28","src":"anthropic-api","model":"claude-haiku-5-5","in":2526730,"out":308822,"cr":0,"cw":0,"requests":196,"cost":4.07},{"d":"2026-09-29","src":"anthropic-api","model":"claude-opus-5-5","in":4122164,"out":503820,"cr":0,"cw":0,"requests":320,"cost":33.21},{"d":"2026-09-29","src":"anthropic-api","model":"claude-haiku-5-5","in":5606262,"out":685209,"cr":0,"cw":0,"requests":436,"cost":9.03},{"d":"2026-09-30","src":"anthropic-api","model":"claude-opus-5-5","in":2390199,"out":292135,"cr":0,"cw":0,"requests":185,"cost":19.25},{"d":"2026-09-30","src":"anthropic-api","model":"claude-haiku-5-5","in":4940218,"out":603804,"cr":0,"cw":0,"requests":384,"cost":7.96},{"d":"2026-10-01","src":"anthropic-api","model":"claude-opus-5-5","in":1203163,"out":147053,"cr":0,"cw":0,"requests":93,"cost":9.69},{"d":"2026-10-01","src":"anthropic-api","model":"claude-haiku-5-5","in":5365671,"out":655804,"cr":0,"cw":0,"requests":417,"cost":8.64},{"d":"2026-10-02","src":"anthropic-api","model":"claude-opus-5-5","in":1771854,"out":216560,"cr":0,"cw":0,"requests":137,"cost":14.27},{"d":"2026-10-02","src":"anthropic-api","model":"claude-haiku-5-5","in":8047209,"out":983547,"cr":0,"cw":0,"requests":625,"cost":12.96},{"d":"2026-10-03","src":"anthropic-api","model":"claude-opus-5-5","in":1764681,"out":215683,"cr":0,"cw":0,"requests":137,"cost":14.22},{"d":"2026-10-03","src":"anthropic-api","model":"claude-haiku-5-5","in":3019061,"out":368996,"cr":0,"cw":0,"requests":234,"cost":4.86},{"d":"2026-10-05","src":"anthropic-api","model":"claude-opus-5-5","in":2562006,"out":313134,"cr":0,"cw":0,"requests":199,"cost":20.64},{"d":"2026-10-05","src":"anthropic-api","model":"claude-haiku-5-5","in":1684133,"out":205838,"cr":0,"cw":0,"requests":130,"cost":2.71},{"d":"2026-10-08","src":"anthropic-api","model":"claude-opus-5-5","in":1632367,"out":199511,"cr":0,"cw":0,"requests":126,"cost":13.15},{"d":"2026-10-08","src":"anthropic-api","model":"claude-haiku-5-5","in":3026369,"out":369889,"cr":0,"cw":0,"requests":235,"cost":4.88},{"d":"2026-10-09","src":"anthropic-api","model":"claude-opus-5-5","in":1591229,"out":194483,"cr":0,"cw":0,"requests":123,"cost":12.82},{"d":"2026-10-09","src":"anthropic-api","model":"claude-haiku-5-5","in":1082327,"out":132284,"cr":0,"cw":0,"requests":84,"cost":1.74},{"d":"2026-10-10","src":"anthropic-api","model":"claude-opus-5-5","in":1525837,"out":186491,"cr":0,"cw":0,"requests":118,"cost":12.29},{"d":"2026-10-10","src":"anthropic-api","model":"claude-haiku-5-5","in":4845046,"out":592172,"cr":0,"cw":0,"requests":376,"cost":7.81},{"d":"2026-10-11","src":"anthropic-api","model":"claude-opus-5-5","in":1013793,"out":123908,"cr":0,"cw":0,"requests":78,"cost":8.17},{"d":"2026-10-11","src":"anthropic-api","model":"claude-haiku-5-5","in":3633042,"out":444038,"cr":0,"cw":0,"requests":282,"cost":5.85},{"d":"2026-10-12","src":"anthropic-api","model":"claude-opus-5-5","in":1125553,"out":137567,"cr":0,"cw":0,"requests":87,"cost":9.07},{"d":"2026-10-12","src":"anthropic-api","model":"claude-haiku-5-5","in":4744539,"out":579888,"cr":0,"cw":0,"requests":369,"cost":7.64},{"d":"2026-10-13","src":"anthropic-api","model":"claude-opus-5-5","in":1275582,"out":155904,"cr":0,"cw":0,"requests":99,"cost":10.28},{"d":"2026-10-13","src":"anthropic-api","model":"claude-haiku-5-5","in":3724348,"out":455198,"cr":0,"cw":0,"requests":289,"cost":6.0},{"d":"2026-10-14","src":"anthropic-api","model":"claude-opus-5-5","in":1057974,"out":129308,"cr":0,"cw":0,"requests":82,"cost":8.52},{"d":"2026-10-14","src":"anthropic-api","model":"claude-haiku-5-5","in":7913594,"out":967217,"cr":0,"cw":0,"requests":615,"cost":12.75},{"d":"2026-10-15","src":"anthropic-api","model":"claude-opus-5-5","in":1631271,"out":199377,"cr":0,"cw":0,"requests":126,"cost":13.14},{"d":"2026-10-15","src":"anthropic-api","model":"claude-haiku-5-5","in":2130033,"out":260337,"cr":0,"cw":0,"requests":165,"cost":3.43},{"d":"2026-10-16","src":"anthropic-api","model":"claude-opus-5-5","in":1361212,"out":166370,"cr":0,"cw":0,"requests":105,"cost":10.97},{"d":"2026-10-16","src":"anthropic-api","model":"claude-haiku-5-5","in":3643549,"out":445322,"cr":0,"cw":0,"requests":283,"cost":5.87},{"d":"2026-10-19","src":"anthropic-api","model":"claude-opus-5-5","in":1632611,"out":199541,"cr":0,"cw":0,"requests":126,"cost":13.15},{"d":"2026-10-19","src":"anthropic-api","model":"claude-haiku-5-5","in":8506673,"out":1039704,"cr":0,"cw":0,"requests":661,"cost":13.71},{"d":"2026-10-21","src":"anthropic-api","model":"claude-opus-5-5","in":1344323,"out":164306,"cr":0,"cw":0,"requests":104,"cost":10.83},{"d":"2026-10-21","src":"anthropic-api","model":"claude-haiku-5-5","in":4775566,"out":583680,"cr":0,"cw":0,"requests":371,"cost":7.69},{"d":"2026-10-22","src":"anthropic-api","model":"claude-opus-5-5","in":1573715,"out":192342,"cr":0,"cw":0,"requests":122,"cost":12.68},{"d":"2026-10-22","src":"anthropic-api","model":"claude-haiku-5-5","in":5113653,"out":625002,"cr":0,"cw":0,"requests":397,"cost":8.24},{"d":"2026-10-23","src":"anthropic-api","model":"claude-opus-5-5","in":368255,"out":45008,"cr":0,"cw":0,"requests":28,"cost":2.97},{"d":"2026-10-23","src":"anthropic-api","model":"claude-haiku-5-5","in":8759422,"out":1070596,"cr":0,"cw":0,"requests":681,"cost":14.11},{"d":"2026-10-24","src":"anthropic-api","model":"claude-opus-5-5","in":1597249,"out":195219,"cr":0,"cw":0,"requests":124,"cost":12.87},{"d":"2026-10-24","src":"anthropic-api","model":"claude-haiku-5-5","in":3308978,"out":404430,"cr":0,"cw":0,"requests":257,"cost":5.33}]}</script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const S = (tag, a, p) => { const n = document.createElementNS(NS, tag); for (const k in a) n.setAttribute(k, a[k]); if (p) p.appendChild(n); return n; };
+  const E = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+  /* ---------- formatting ---------- */
+  const sig = (v) => (v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2)).replace(/\.?0+$/, '');
+  const tok = (n) => n >= 1e9 ? sig(n / 1e9) + 'B' : n >= 1e6 ? sig(n / 1e6) + 'M' : n >= 1e3 ? sig(n / 1e3) + 'K' : String(Math.round(n));
+  const usd = (n) => n >= 1e4 ? '$' + sig(n / 1e3) + 'K' : '$' + (n >= 100 ? Math.round(n).toLocaleString('en') : n.toFixed(2));
+  const usdFull = (n) => '$' + Math.round(n).toLocaleString('en');
+  const int = (n) => Math.round(n).toLocaleString('en');
+  const pct = (x) => x >= 0.995 ? '100%' : x >= 0.1 ? (x * 100).toFixed(1) + '%' : x >= 0.001 ? (x * 100).toFixed(2) + '%' : '<0.1%';
+  const D = (s) => new Date(s + 'T00:00:00Z');
+  const K = (d) => d.toISOString().slice(0, 10);
+  const add = (d, n) => new Date(d.getTime() + n * 864e5);
+  const diff = (a, b) => Math.round((b - a) / 864e5);
+  const WD = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  const mdz = (d) => (d.getUTCMonth() + 1) + '/' + String(d.getUTCDate()).padStart(2, '0');
+  const mdLong = (d) => (d.getUTCMonth() + 1) + ' 月 ' + d.getUTCDate() + ' 日';
+
+  /* ---------- names & colors ---------- */
+  const SRC_COLORS = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)'];
+  const MODEL_COLORS = ['var(--c4)', 'var(--c5)', 'var(--c1)', 'var(--c3)', 'var(--c6)', 'var(--c2)', 'var(--c7)'];
+  const MODEL_NAMES = {'claude-opus-5-5': 'Opus 5.5', 'claude-opus-5': 'Opus 5', 'claude-fable-5-1': 'Fable 5.1', 'claude-fable-5': 'Fable 5',
+    'claude-haiku-5-5': 'Haiku 5.5', 'other': '其他模型', 'sample-model-a': '示例模型 A', 'sample-model-b': '示例模型 B'};
+  const modelName = (m) => MODEL_NAMES[m] || m.replace(/^claude-/, '');
+
+  let data, srcColor = {}, state = {src: 'all', range: 'all', metric: 'cost'};
+  try { Object.assign(state, JSON.parse(localStorage.getItem('usage-console') || '{}')); } catch (e) {}
+  const save = () => { try { localStorage.setItem('usage-console', JSON.stringify(state)); } catch (e) {} };
+
+  /* ---------- row math ---------- */
+  const rowTok = (r) => (r.in || 0) + (r.out || 0) + (r.cr || 0) + (r.cw || 0);
+  function rowCost(r) {
+    if (r.cost != null) return r.cost;
+    const p = data.prices.per_mtok[r.model] || data.prices.per_mtok.other;
+    if (!p) return 0;
+    return ((r.in || 0) * p[0] + (r.out || 0) * p[1] + (r.cr || 0) * p[2] + (r.cw || 0) * p[3]) / 1e6;
+  }
+  const val = (r) => state.metric === 'cost' ? rowCost(r) : rowTok(r);
+  const fmt = (n) => state.metric === 'cost' ? usd(n) : tok(n);
+  const groupKey = (r) => state.src === 'all' ? r.src : r.model;
+  const srcName = (id) => (data.sources.find(s => s.id === id) || {name: id}).name;
+  const groupName = (g) => state.src === 'all' ? srcName(g) : modelName(g);
+
+  function view() {
+    const rows = data.rows.filter(r => state.src === 'all' || r.src === state.src);
+    const last = D(data.generated.slice(0, 10));
+    const firstAll = rows.length ? D(rows.reduce((m, r) => r.d < m ? r.d : m, rows[0].d)) : last;
+    const start = state.range === 'all' ? firstAll : add(last, -(Number(state.range) - 1));
+    const inR = rows.filter(r => D(r.d) >= start && D(r.d) <= last);
+    let prev = null;
+    if (state.range !== 'all') {
+      const ps = add(start, -Number(state.range)), pe = add(start, -1);
+      prev = rows.filter(r => D(r.d) >= ps && D(r.d) <= pe).reduce((s, r) => s + val(r), 0);
+    }
+    const groups = {};
+    inR.forEach(r => { const g = groupKey(r); groups[g] = (groups[g] || 0) + val(r); });
+    const order = Object.entries(groups).sort((a, b) => b[1] - a[1]).map(e => e[0]);
+    const color = {};
+    order.forEach((g, i) => color[g] = state.src === 'all' ? srcColor[g] : MODEL_COLORS[i % MODEL_COLORS.length]);
+    const byDay = new Map();
+    inR.forEach(r => { const m = byDay.get(r.d) || byDay.set(r.d, {}).get(r.d); const g = groupKey(r); m[g] = (m[g] || 0) + val(r); });
+    const total = inR.reduce((s, r) => s + val(r), 0);
+    const actual = inR.filter(r => r.cost != null).length, estd = inR.length - actual;
+    return {rows, inR, start, last, prev, groups, order, color, byDay, total, firstAll,
+      costKind: state.metric !== 'cost' ? '' : estd && actual ? 'est + actual' : actual ? 'actual' : 'est'};
+  }
+
+  /* ---------- top controls ---------- */
+  function renderTabs() {
+    const box = $('srcTabs'); box.replaceChildren();
+    [{id: 'all', name: '全部来源'}].concat(data.sources).forEach(s => {
+      const b = E('button'); b.type = 'button'; b.id = 'src-' + s.id; b.dataset.s = s.id;
+      if (s.id !== 'all') { const sw = E('span', 'sw'); sw.style.background = srcColor[s.id]; b.appendChild(sw); }
+      b.append(s.name); b.setAttribute('aria-pressed', String(state.src === s.id));
+      b.addEventListener('click', () => { state.src = s.id; save(); render(); });
+      box.appendChild(b);
+    });
+    document.querySelectorAll('#rngTabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.r === state.range)));
+    document.querySelectorAll('.metric-sw button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === state.metric)));
+  }
+
+  function renderStatus() {
+    const st = $('status'); st.replaceChildren();
+    const gen = new Date(data.generated), age = (Date.now() - gen) / 36e5;
+    const when = gen.toLocaleString('zh-CN', {timeZone: data.timezone, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
+    st.append(E('span', age < 36 ? 'ok' : 'stale', age < 36 ? '● 已同步' : '● 数据已过期 ' + Math.floor(age / 24) + ' 天'),
+      E('span', null, '更新于 ' + when + ' CT'), E('span', null, data.sources.length + ' 个来源'));
+    if (data.sample) st.appendChild(E('span', 'flag', '示例数据'));
+    if (!data.prices.verified) st.appendChild(E('span', 'flag', '价格待核实'));
+  }
+
+  /* ---------- hero ---------- */
+  function renderHero(v) {
+    const big = $('big'); big.replaceChildren();
+    const sub = $('heroSub'); sub.replaceChildren();
+    if (state.metric === 'cost') { big.append(usdFull(v.total)); sub.appendChild(E('span', 'delta', v.costKind)); }
+    else { big.append(tok(v.total)); big.appendChild(E('span', 'u', 'tok')); }
+    const span = diff(v.start, v.last) + 1;
+    if (v.prev != null && v.prev > 0) {
+      const ch = v.total / v.prev - 1;
+      sub.appendChild(E('span', 'delta ' + (ch >= 0 ? 'up' : 'down'), (ch >= 0 ? '▲ ' : '▼ ') + Math.abs(ch * 100).toFixed(0) + '% 比前 ' + state.range + ' 天'));
+    }
+    sub.append(E('span', null, '日均 ' + fmt(v.total / span)), E('span', null, mdz(v.start) + ' – ' + mdz(v.last) + '，' + span + ' 天'));
+    // sparkline
+    const box = $('spark'); box.replaceChildren();
+    const W = Math.max(240, box.clientWidth), H = 56;
+    const ks = [...v.byDay.keys()].sort(), dn = ks.find((d, i) => i + 4 < ks.length && diff(D(d), D(ks[i + 4])) < 14);
+    const s0 = state.range === 'all' && dn ? D(dn) : v.start;
+    const days = []; for (let d = s0; d <= v.last; d = add(d, 1)) days.push(d);
+    const ys = days.map(d => { const m = v.byDay.get(K(d)); return m ? Object.values(m).reduce((a, b) => a + b, 0) : 0; });
+    const mx = Math.max(1e-9, ...ys);
+    const x = (i) => days.length < 2 ? W / 2 : i / (days.length - 1) * W, y = (n) => H - 2 - n / mx * (H - 6);
+    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'none', 'aria-hidden': 'true'}, box);
+    let d = ''; ys.forEach((n, i) => d += (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(n).toFixed(1));
+    S('path', {d: d + `L${W},${H}L0,${H}Z`, fill: 'var(--c1)', 'fill-opacity': .1}, svg);
+    S('path', {d, fill: 'none', stroke: 'var(--c1)', 'stroke-width': 1.25, 'vector-effect': 'non-scaling-stroke'}, svg);
+    S('circle', {cx: x(ys.length - 1), cy: y(ys[ys.length - 1]), r: 2.5, fill: 'var(--c1)'}, svg);
+
+    $('compTitle').textContent = state.src === 'all' ? '按来源' : '按模型';
+    $('compAside').textContent = state.metric === 'cost' ? '费用占比' : 'token 占比';
+    const bar = $('compBar'), comp = $('comp'); bar.replaceChildren(); comp.replaceChildren();
+    if (!v.total) { comp.appendChild(E('div', 'empty', '这段时间没有用量')); return; }
+    v.order.forEach(g => {
+      const share = v.groups[g] / v.total;
+      const s = E('span'); s.style.background = v.color[g]; s.style.flex = String(Math.max(share, 0.003)); bar.appendChild(s);
+      const row = E('div', 'comp-row'), i = E('i'); i.style.background = v.color[g];
+      row.append(i, E('span', 'n', groupName(g)), E('span', 'v', fmt(v.groups[g])), E('span', 'p', pct(share)));
+      comp.appendChild(row);
+    });
+  }
+
+  /* ---------- KPIs ---------- */
+  function streaks(rows) {
+    const days = [...new Set(rows.filter(r => rowTok(r) > 0 || r.cost > 0).map(r => r.d))].sort().map(D);
+    let best = 0, run = 0, p = null;
+    days.forEach(d => { run = p && diff(p, d) === 1 ? run + 1 : 1; best = Math.max(best, run); p = d; });
+    const last = D(data.generated.slice(0, 10));
+    return {best, current: p && diff(p, last) <= 1 ? run : 0};
+  }
+  function renderKpis(v) {
+    const box = $('kpis'); box.replaceChildren();
+    const sessions = v.inR.reduce((s, r) => s + (r.sessions || 0), 0);
+    const requests = v.inR.reduce((s, r) => s + (r.requests || 0), 0);
+    const activeDays = new Set(v.inR.map(r => r.d)).size, span = diff(v.start, v.last) + 1;
+    let busiest = null; v.byDay.forEach((m, d) => { const t = Object.values(m).reduce((a, b) => a + b, 0); if (!busiest || t > busiest.t) busiest = {d, t}; });
+    const st = streaks(v.rows);
+    const items = [];
+    if (sessions) items.push({k: '会话', v: int(sessions), d: activeDays ? '每活跃日 ' + (sessions / activeDays).toFixed(1) : ''});
+    if (requests) items.push({k: 'API 请求', v: int(requests), d: '仅账单类来源'});
+    items.push({k: '活跃天数', v: String(activeDays), small: '/' + span, d: pct(activeDays / span) + ' 的日子'});
+    items.push({k: '最高的一天', v: busiest ? mdz(D(busiest.d)) : '—', d: busiest ? WD[D(busiest.d).getUTCDay()] + ' · ' + fmt(busiest.t) : ''});
+    items.push({k: '连续', tag: '全部', v: String(st.current), small: ' 天', d: '最长 ' + st.best + ' 天'});
+    const ls = data.longest_session;
+    if (ls && (state.src === 'all' || state.src === ls.src)) {
+      const m = Math.round(ls.ms / 6e4), dd = Math.floor(m / 1440), hh = Math.floor(m % 1440 / 60), mm = m % 60;
+      items.push({k: '最长会话', tag: '全部', v: dd ? dd + 'd ' + hh + 'h' : hh + 'h ' + mm + 'm', d: srcName(ls.src) + ' · ' + mdz(D(ls.start)) + ' 起'});
+    }
+    box.style.setProperty('--n', items.length);
+    items.forEach(it => {
+      const c = E('div', 'kpi'), k = E('div', 'k', it.k);
+      if (it.tag) k.appendChild(E('em', null, it.tag));
+      const vv = E('div', 'v', it.v); if (it.small) vv.appendChild(E('small', null, it.small));
+      c.append(k, vv, E('div', 'd', it.d)); box.appendChild(c);
+    });
+  }
+
+  /* ---------- quotas ---------- */
+  function renderQuotas() {
+    const qs = (data.quotas || []).filter(q => state.src === 'all' || !q.src || q.src === state.src);
+    $('quotaSec').hidden = !qs.length;
+    const box = $('quotas'); box.replaceChildren();
+    $('quotaAside').textContent = qs.some(q => q.sample) ? '示例' : '';
+    qs.forEach(q => {
+      const c = E('div', 'q'), top = E('div', 'top'), tr = E('div', 'track'), fill = E('span'), bot = E('div', 'bot');
+      top.append(E('span', null, q.name + ' · ' + q.window), E('span', 'p', Math.round(q.used * 100) + '%'));
+      fill.style.width = Math.min(100, q.used * 100) + '%';
+      fill.style.background = q.used >= .9 ? 'var(--c6)' : q.used >= .7 ? 'var(--c1)' : 'var(--c2)';
+      tr.appendChild(fill);
+      const left = (new Date(q.resets) - Date.now()) / 36e5;
+      bot.append(E('span', null, '剩余 ' + Math.max(0, Math.round((1 - q.used) * 100)) + '%'),
+        E('span', null, left > 0 ? (left >= 24 ? Math.floor(left / 24) + 'd ' + Math.round(left % 24) + 'h' : Math.max(1, Math.round(left)) + 'h') + ' 后重置' : '已重置'));
+      c.append(top, tr, bot); box.appendChild(c);
+    });
+  }
+
+  /* ---------- daily chart ---------- */
+  function niceStep(max, n) { const raw = max / n, mag = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(s => s * mag).find(s => raw <= s); }
+  function renderDaily(v) {
+    const box = $('daily'), read = $('dailyRead'), leg = $('dailyLegend');
+    box.replaceChildren(); read.replaceChildren(); leg.replaceChildren();
+    v.order.forEach(g => { const s = E('span'), i = E('i'); i.style.background = v.color[g]; s.append(i, groupName(g)); leg.appendChild(s); });
+    const ma = E('span'); ma.append(E('i', 'ma'), '7 日均线'); leg.appendChild(ma);
+    if (!v.total) { box.appendChild(E('div', 'empty', '这段时间没有用量')); return; }
+    // All-time view starts at the first busy stretch so a lone early day doesn't leave months of empty axis.
+    let start = v.start;
+    if (state.range === 'all') {
+      const ds = [...v.byDay.keys()].sort();
+      const dense = ds.find((d, i) => i + 4 < ds.length && diff(D(d), D(ds[i + 4])) < 14);
+      if (dense) start = D(dense);
+    }
+    const days = []; for (let d = start; d <= v.last; d = add(d, 1)) days.push(d);
+    const tot = days.map(d => { const m = v.byDay.get(K(d)); return m ? Object.values(m).reduce((a, b) => a + b, 0) : 0; });
+    const avg = tot.map((_, i) => { const s = tot.slice(Math.max(0, i - 6), i + 1); return s.reduce((a, b) => a + b, 0) / s.length; });
+    const sorted = tot.filter(t => t > 0).sort((a, b) => a - b), p95 = sorted[Math.floor(sorted.length * .95)] || 0, mx = Math.max(...tot);
+    const cap = mx > p95 * 2.2 && sorted.length > 10 ? p95 * 1.5 : mx;
+    const W = Math.max(300, box.clientWidth), narrow = W < 600, H = narrow ? 220 : 280;
+    const m = {t: 18, r: 4, b: 24, l: narrow ? 40 : 52};
+    const step = niceStep(cap, narrow ? 3 : 4), top = Math.ceil(cap / step) * step;
+    const iw = W - m.l - m.r, bw = iw / days.length, barW = Math.max(1, bw * (days.length > 60 ? .72 : .62));
+    const X = (i) => m.l + i * bw + bw / 2, Y = (n) => H - m.b - Math.min(n, top) / top * (H - m.t - m.b);
+    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': '每日用量，按' + (state.src === 'all' ? '来源' : '模型') + '堆叠'}, box);
+    for (let t = 0; t <= top + 1e-9; t += step) {
+      S('line', {x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: t ? 'var(--rule)' : 'var(--rule-2)', 'stroke-dasharray': t ? '2 4' : ''}, svg);
+      const tx = S('text', {x: m.l - 8, y: Y(t) + 3.5, 'text-anchor': 'end'}, svg); tx.textContent = fmt(t).replace('.00', '');
+    }
+    const nT = narrow ? 4 : 7, every = Math.max(1, Math.round(days.length / nT));
+    days.forEach((d, i) => { if (i % every === 0) { const tx = S('text', {x: X(i), y: H - 6, 'text-anchor': 'middle'}, svg); tx.textContent = mdz(d); } });
+    const cols = S('g', {}, svg);
+    days.forEach((d, i) => {
+      const mrec = v.byDay.get(K(d)); if (!mrec) return;
+      let acc = 0;
+      v.order.slice().reverse().forEach(g => {
+        const n = mrec[g] || 0; if (!n) return;
+        const y0 = Y(acc), y1 = Y(acc + n); acc += n;
+        if (y0 - y1 > 0.2) S('rect', {x: X(i) - barW / 2, y: y1, width: barW, height: y0 - y1, fill: v.color[g], 'data-i': i, class: 'b'}, cols);
+      });
+      if (tot[i] > top) {
+        const yb = m.t + 8;
+        S('path', {d: `M${X(i) - barW / 2 - 1},${yb + 3}L${X(i) + barW / 2 + 1},${yb - 1}M${X(i) - barW / 2 - 1},${yb + 7}L${X(i) + barW / 2 + 1},${yb + 3}`, stroke: 'var(--bg)', 'stroke-width': 2.5}, svg);
+        const tx = S('text', {x: X(i), y: m.t - 6, 'text-anchor': 'middle', style: 'fill:var(--fg)'}, svg); tx.textContent = fmt(tot[i]);
+      }
+    });
+    let pd = ''; avg.forEach((a, i) => pd += (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(a).toFixed(1));
+    S('path', {d: pd, fill: 'none', stroke: 'var(--fg)', 'stroke-width': 1.25, 'stroke-linejoin': 'round', opacity: .85}, svg);
+    const hl = S('rect', {y: m.t, height: H - m.t - m.b, width: bw, fill: 'var(--fg)', 'fill-opacity': .06, visibility: 'hidden'}, svg);
+    const show = (i) => {
+      read.replaceChildren(); const d = days[i], mrec = v.byDay.get(K(d)) || {};
+      read.appendChild(E('span', 'when', mdz(d) + ' ' + WD[d.getUTCDay()]));
+      read.appendChild(E('span', null, '合计 ' + fmt(tot[i])));
+      v.order.forEach(g => { if (!mrec[g]) return; const it = E('span', 'it'), ic = E('i'); ic.style.background = v.color[g]; it.append(ic, groupName(g) + ' ' + fmt(mrec[g])); read.appendChild(it); });
+      read.appendChild(E('span', null, '7 日均 ' + fmt(avg[i])));
+      hl.setAttribute('x', X(i) - bw / 2); hl.setAttribute('visibility', 'visible');
+      cols.querySelectorAll('.b.on').forEach(b => b.classList.remove('on')); cols.querySelectorAll(`.b[data-i="${i}"]`).forEach(b => b.classList.add('on'));
+    };
+    const idx = (ev) => { const r = svg.getBoundingClientRect(); return Math.max(0, Math.min(days.length - 1, Math.floor(((ev.clientX - r.left) * W / r.width - m.l) / bw))); };
+    svg.addEventListener('pointermove', (ev) => show(idx(ev)));
+    svg.addEventListener('pointerdown', (ev) => show(idx(ev)));
+    svg.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse') show(days.length - 1); });
+    show(days.length - 1);
+  }
+
+  /* ---------- month blocks ---------- */
+  function renderMonths(v) {
+    const box = $('months'); box.replaceChildren();
+    const tot = new Map(); v.byDay.forEach((m, d) => tot.set(d, Object.values(m).reduce((a, b) => a + b, 0)));
+    const keys = [...tot.keys()].sort();
+    if (!keys.length) { box.appendChild(E('div', 'empty', '这段时间没有用量')); $('heatAside').textContent = ''; return; }
+    const dense = keys.find((d, i) => i + 4 < keys.length && diff(D(d), D(keys[i + 4])) < 14) || keys[0];
+    const skipped = keys.filter(k => k < dense).length;
+    const vals = [...tot.values()].filter(t => t > 0).sort((a, b) => a - b);
+    const q = (p) => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))];
+    const cuts = [q(.25), q(.5), q(.75)];
+    const lvl = (t) => !t ? 0 : t <= cuts[0] ? 1 : t <= cuts[1] ? 2 : t <= cuts[2] ? 3 : 4;
+    const first = D(dense.slice(0, 8) + '01'), last = v.last;
+    const gap = 3; let nWeeks = 0;
+    for (let mo = first; mo <= last; mo = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 1))) {
+      const e = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 0)); nWeeks += Math.ceil((((mo.getUTCDay() + 6) % 7) + e.getUTCDate()) / 7);
+    }
+    const months = Math.round(diff(first, last) / 30) + 1, avail = box.clientWidth - (months - 1) * 22 - 2;
+    const cell = Math.max(7, Math.min(20, Math.floor(avail / nWeeks) - gap));
+    for (let mo = first; mo <= last; mo = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 1))) {
+      const end = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 0));
+      const off = (mo.getUTCDay() + 6) % 7, weeks = Math.ceil((off + end.getUTCDate()) / 7);
+      const wrap = E('div', 'month');
+      const Wd = weeks * (cell + gap) - gap, Hd = 7 * (cell + gap) - gap;
+      const svg = S('svg', {width: Wd, height: Hd, viewBox: `0 0 ${Wd} ${Hd}`, role: 'img', 'aria-label': (mo.getUTCMonth() + 1) + ' 月活动'}, wrap);
+      let sum = 0;
+      for (let dd = 1; dd <= end.getUTCDate(); dd++) {
+        const d = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth(), dd));
+        const pos = off + dd - 1, col = Math.floor(pos / 7), row = pos % 7;
+        const k = K(d), t = tot.get(k) || 0; sum += t;
+        const future = d > last;
+        const r = S('rect', {x: col * (cell + gap), y: row * (cell + gap), width: cell, height: cell, rx: 1.5,
+          fill: future ? 'none' : `var(--heat-${lvl(t)})`, stroke: future ? 'var(--rule)' : 'none', 'stroke-dasharray': future ? '2 2' : ''}, svg);
+        if (!future) {
+          const showD = () => { $('heatRead').textContent = mdz(d) + ' ' + WD[d.getUTCDay()] + ' · ' + (t ? fmt(t) : '无活动'); };
+          r.addEventListener('pointerenter', showD); r.addEventListener('pointerdown', showD);
+        }
+      }
+      wrap.appendChild(E('div', 'ml', String(mo.getUTCFullYear()).slice(2) + '.' + String(mo.getUTCMonth() + 1).padStart(2, '0') + '  ' + fmt(sum)));
+      box.appendChild(wrap);
+    }
+    $('heatAside').textContent = new Set(keys).size + ' 个活跃日' + (skipped ? ' · 更早的 ' + skipped + ' 天未画出' : '');
+  }
+
+  /* ---------- breakdown ---------- */
+  function renderTable(v) {
+    const t = $('tbl'); t.replaceChildren();
+    const by = {};
+    v.inR.forEach(r => {
+      const k = r.src + '|' + r.model, o = by[k] || (by[k] = {src: r.src, model: r.model, in: 0, out: 0, cr: 0, cw: 0, cost: 0, est: false});
+      o.in += r.in || 0; o.out += r.out || 0; o.cr += r.cr || 0; o.cw += r.cw || 0; o.cost += rowCost(r); if (r.cost == null) o.est = true;
+    });
+    const list = Object.values(by).map(o => ({...o, v: state.metric === 'cost' ? o.cost : o.in + o.out + o.cr + o.cw})).sort((a, b) => b.v - a.v);
+    $('tblAside').textContent = list.length + ' 个模型';
+    if (!list.length) { t.appendChild(E('caption', 'empty', '这段时间没有用量')); return; }
+    const head = E('thead'), hr = E('tr');
+    [['模型', ''], ['占比', 'share'], ['输入', 'opt'], ['输出', 'opt'], ['缓存读', 'opt'], ['缓存写', 'opt'], ['费用', '']].forEach(([n, c]) => { const th = E('th', c, n); th.scope = 'col'; hr.appendChild(th); });
+    head.appendChild(hr); t.appendChild(head);
+    const body = E('tbody'), max = list[0].v || 1;
+    list.forEach((o, idx) => {
+      const tr = E('tr'), color = state.src === 'all' ? srcColor[o.src] : v.color[o.model] || MODEL_COLORS[idx % MODEL_COLORS.length];
+      const nm = E('td'), w = E('div', 'nm'), i = E('i'), lab = E('div', null, modelName(o.model));
+      i.style.background = color; lab.appendChild(E('small', null, srcName(o.src))); w.append(i, lab); nm.appendChild(w);
+      const sh = E('td', 'share'), sb = E('div', 'sbar'), fill = E('span');
+      fill.style.width = (o.v / max * 100) + '%'; fill.style.background = color; sb.appendChild(fill);
+      sh.append(sb, E('span', 'pc', pct(o.v / (v.total || 1))));
+      const cost = E('td', null, usd(o.cost)); if (o.est) cost.appendChild(E('span', 'est', 'est'));
+      tr.append(nm, sh, E('td', 'opt', tok(o.in)), E('td', 'opt', tok(o.out)), E('td', 'opt', o.cr ? tok(o.cr) : '—'), E('td', 'opt', o.cw ? tok(o.cw) : '—'), cost);
+      body.appendChild(tr);
+    });
+    t.appendChild(body);
+  }
+
+  /* ---------- hours ---------- */
+  function renderRhythm() {
+    const box = $('punch'), read = $('punchRead'); box.replaceChildren();
+    const grid = Array.from({length: 7}, () => new Array(24).fill(0));
+    Object.entries(data.punch || {}).forEach(([s, rows]) => { if (state.src === 'all' || s === state.src) rows.forEach((r, d) => r.forEach((n, hh) => grid[d][hh] += n)); });
+    const flat = grid.flat(), mx = Math.max(1e-9, ...flat), sum = flat.reduce((a, b) => a + b, 0);
+    const hourTot = grid[0].map((_, hh) => grid.reduce((s, r) => s + r[hh], 0)), peak = hourTot.indexOf(Math.max(...hourTot));
+    $('punchAside').textContent = '高峰 ' + String(peak).padStart(2, '0') + ':00 · CT';
+    const W = Math.max(300, box.clientWidth), lw = 28, cw = (W - lw) / 24, ch = Math.min(26, Math.max(16, cw)), H = 7 * ch + 22;
+    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': '每周各时段的消息分布，高峰 ' + peak + ' 点'}, box);
+    const DN = ['一', '二', '三', '四', '五', '六', '日'];
+    grid.forEach((row, d) => {
+      const tx = S('text', {x: 0, y: d * ch + ch / 2 + 4}, svg); tx.textContent = DN[d];
+      row.forEach((n, hh) => {
+        const r = n ? Math.max(1.5, Math.sqrt(n / mx) * Math.min(cw, ch) * 0.46) : 1;
+        S('circle', {cx: lw + hh * cw + cw / 2, cy: d * ch + ch / 2, r, fill: n ? (hh === peak ? 'var(--c2)' : 'var(--heat-3)') : 'var(--rule-2)'}, svg);
+      });
+    });
+    [0, 6, 12, 18, 23].forEach(hh => { const tx = S('text', {x: lw + hh * cw + cw / 2, y: H - 4, 'text-anchor': 'middle'}, svg); tx.textContent = String(hh).padStart(2, '0'); });
+    const ring = S('rect', {width: cw, height: ch, fill: 'none', stroke: 'var(--fg-2)', 'stroke-width': 1, visibility: 'hidden'}, svg);
+    const show = (d, hh) => {
+      ring.setAttribute('x', lw + hh * cw); ring.setAttribute('y', d * ch); ring.setAttribute('visibility', 'visible');
+      read.replaceChildren(E('span', 'when', '周' + DN[d] + ' ' + String(hh).padStart(2, '0') + ':00'), E('span', null, int(grid[d][hh]) + ' 条消息'), E('span', null, pct(sum ? grid[d][hh] / sum : 0)));
+    };
+    const at = (ev) => { const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * W / r.width, y = (ev.clientY - r.top) * W / r.width;
+      return [Math.max(0, Math.min(6, Math.floor(y / ch))), Math.max(0, Math.min(23, Math.floor((x - lw) / cw)))]; };
+    svg.addEventListener('pointermove', (ev) => show(...at(ev)));
+    svg.addEventListener('pointerdown', (ev) => show(...at(ev)));
+    svg.addEventListener('pointerleave', () => { ring.setAttribute('visibility', 'hidden'); read.replaceChildren(E('span', null, '共 ' + int(sum) + ' 条消息，悬停或点按查看某个时段')); });
+    read.replaceChildren(E('span', null, '共 ' + int(sum) + ' 条消息，悬停或点按查看某个时段'));
+  }
+
+  function renderFoot() {
+    const f = $('foot'); f.replaceChildren();
+    const p1 = E('p'); p1.append('会话记录类来源由本机脚本读取，例如 Claude Code 读 ', E('code', null, '~/.claude/projects'), '；token 含子代理，同一条回复只计一次，口径与 /stats 不同。账单类来源用平台返回的实际金额。');
+    const p2 = E('p', null, '费用标 est 的是按单价估算，标 actual 的是平台账单金额。日期与时段按美国中部时间划分。');
+    f.append(p1, p2);
+    if (!data.prices.verified) f.appendChild(E('p', null, '模型单价是占位值，尚未核实，估算费用仅供看版式。'));
+    if (data.sample) f.appendChild(E('p', null, '示例数据：Claude Code 的总量与各模型用量取自 10 月 24 日的 /stats，每日分布为示例；Codex CLI、Anthropic API 和订阅额度全部为示例。'));
+  }
+
+  function render() {
+    if (state.src !== 'all' && !data.sources.some(s => s.id === state.src)) state.src = 'all';
+    renderTabs(); renderStatus();
+    const v = view();
+    renderHero(v); renderKpis(v); renderQuotas(); renderDaily(v); renderMonths(v); renderTable(v); renderRhythm(); renderFoot();
+  }
+
+  document.querySelectorAll('#rngTabs button').forEach(b => b.addEventListener('click', () => { state.range = b.dataset.r; save(); render(); }));
+  document.querySelectorAll('.metric-sw button').forEach(b => b.addEventListener('click', () => { state.metric = b.dataset.m; save(); render(); }));
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => data && render(), 150); });
+
+  const sample = () => JSON.parse($('sample').textContent);
+  fetch('data/usage.json', {cache: 'no-store'})
+    .then(r => r.ok ? r.json() : null)
+    .then(d => d && Array.isArray(d.rows) && Array.isArray(d.sources) ? d : sample())
+    .catch(sample)
+    .then(d => { data = d; data.prices = data.prices || {verified: true, per_mtok: {}}; data.sources.forEach((s, i) => srcColor[s.id] = SRC_COLORS[i % SRC_COLORS.length]); render(); })
+    .catch(err => { $('status').textContent = '数据没有读到（' + err.message + '），稍后刷新页面再试。'; });
+})();
+</script>

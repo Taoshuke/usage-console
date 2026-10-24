@@ -1,0 +1,11 @@
+{
+  "name": "usage-console",
+  "private": true,
+  "scripts": {
+    "build": "python3 scripts/build.py",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.122.0"
+  }
+}

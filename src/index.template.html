@@ -1,0 +1,624 @@
+<title>Usage Console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky control bar (source + range), then one hero line (the number and what it is made of),
+   a KPI strip, quotas, the daily chart, month blocks, a breakdown table and hours. Dark only; terminal
+   manners (mono labels, prompt marks, inverted tabs, dashed rules) without imitating a terminal. */
+:root{
+  --bg:#0A0C0F; --raise:#0F1216; --well:#14181D; --rule:#1E242B; --rule-2:#2A313A;
+  --fg:#E4E7EB; --fg-2:#A2A9B4; --fg-3:#6A7280; --fg-4:#4A515C;
+  --c1:#E5B567; --c2:#6CC5C0; --c3:#C895D6; --c4:#7FA6E8; --c5:#93C47D; --c6:#E07F73; --c7:#8A929E;
+  --heat-0:#14181D; --heat-1:#1B3434; --heat-2:#24514F; --heat-3:#378078; --heat-4:#6CC5C0;
+  --up:#E07F73; --down:#93C47D;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace;
+  --sans:"IBM Plex Sans","PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.page{max-width:1160px;margin:0 auto}
+.mono{font-family:var(--mono)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:1px solid var(--c1);outline-offset:2px}
+
+/* Control bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--rule);
+  margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.bar-in{max-width:1160px;margin:0 auto;display:flex;align-items:center;gap:12px 24px;min-height:52px;flex-wrap:wrap;padding-block:8px}
+.brand{font:600 13px var(--mono);letter-spacing:.02em;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.brand b{width:8px;height:14px;background:var(--c1);display:inline-block}
+.tabs{display:flex;gap:2px;font:500 12.5px var(--mono);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{appearance:none;border:0;background:transparent;color:var(--fg-2);padding:5px 10px;cursor:pointer;white-space:nowrap;border-radius:2px}
+.tabs button:hover{color:var(--fg)}
+.tabs button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.tabs button .sw{display:inline-block;width:6px;height:6px;margin-right:7px;vertical-align:1px}
+.src{flex:1 1 auto;min-width:0}
+.rng{margin-left:auto}
+@media (max-width:640px){
+  .bar-in{gap:6px;padding-block:8px 6px}
+  .brand{flex:1}
+  .src{order:3;flex-basis:100%;margin-inline:-4px}
+}
+
+.status{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font:12px var(--mono);color:var(--fg-3);padding:18px 0 4px}
+.status .ok{color:var(--down)} .status .stale{color:var(--c1)}
+.flag{color:var(--c3);border:1px dashed color-mix(in srgb,var(--c3) 55%,transparent);padding:0 6px;border-radius:2px}
+
+/* Section heads */
+.sec{padding-top:56px}
+.sh{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-bottom:16px}
+.sh::after{content:"";order:1;flex:1 1 40px;border-top:1px dashed var(--rule-2);min-width:24px}
+.sh > :not(h2){order:2}
+.sh h2{margin:0;font:500 12.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg-2)}
+.sh h2::before{content:"› ";color:var(--c1)}
+.sh .aside{font:12px var(--mono);color:var(--fg-3)}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:36px 64px;padding-top:32px;align-items:end}
+@media (max-width:860px){.hero{grid-template-columns:minmax(0,1fr)}}
+.metric-sw{display:inline-flex;gap:2px;font:500 12px var(--mono);margin-bottom:14px}
+.metric-sw button{appearance:none;background:transparent;border:1px solid var(--rule-2);color:var(--fg-2);padding:3px 9px;cursor:pointer;border-radius:2px}
+.metric-sw button[aria-pressed="true"]{border-color:var(--fg);color:var(--fg)}
+.big{font:500 clamp(56px,9.5vw,104px)/.92 var(--sans);font-feature-settings:"tnum";letter-spacing:-.045em;white-space:nowrap}
+.big .u{font-size:.3em;letter-spacing:0;color:var(--fg-3);font-weight:500;margin-left:.4em}
+.hero-sub{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin-top:14px;font:12.5px var(--mono);color:var(--fg-2)}
+.delta{padding:1px 6px;border-radius:2px;background:var(--well)}
+.delta.up{color:var(--up)} .delta.down{color:var(--down)}
+.spark{margin-top:22px;height:64px}
+.spark svg{display:block;width:100%;height:64px}
+
+.comp-bar{display:flex;height:8px;gap:2px;margin-bottom:14px}
+.comp-bar span{min-width:2px}
+.comp{display:flex;flex-direction:column}
+.comp-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto 64px;gap:10px;align-items:baseline;padding:7px 0;border-top:1px dashed var(--rule-2);font-size:13px}
+.comp-row:first-child{border-top:0}
+.comp-row i{width:8px;height:8px;align-self:center}
+.comp-row .n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.comp-row .v{font-family:var(--mono)}
+.comp-row .p{font-family:var(--mono);color:var(--fg-3);text-align:right}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(var(--n,6),minmax(0,1fr));border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-top:48px}
+.kpi{padding:20px 18px 20px 0;min-width:0}
+.kpi + .kpi{padding-left:18px;border-left:1px dashed var(--rule-2)}
+.kpi .k{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg-3);display:flex;gap:6px;align-items:center}
+.kpi .k em{font-style:normal;color:var(--fg-4);border:1px solid var(--rule-2);padding:0 4px;letter-spacing:0;text-transform:none}
+.kpi .v{font:500 26px/1.15 var(--sans);font-feature-settings:"tnum";letter-spacing:-.025em;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .v small{font-size:13px;color:var(--fg-3);letter-spacing:0;margin-left:2px}
+.kpi .d{font:12px var(--mono);color:var(--fg-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:860px){
+  .kpis{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));
+    padding-inline:max(16px,env(safe-area-inset-left,0px));scroll-padding-inline:max(16px,env(safe-area-inset-left,0px))}
+  .kpis::-webkit-scrollbar{display:none}
+  .kpi{flex:0 0 42%;scroll-snap-align:start}
+}
+@media (max-width:420px){.kpi{flex-basis:56%}}
+
+/* Quotas */
+.quotas{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px 32px}
+.q .top{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.q .top .p{font-family:var(--mono)}
+.q .track{height:6px;background:var(--well);margin-top:8px;position:relative}
+.q .track span{position:absolute;inset:0 auto 0 0}
+.q .bot{display:flex;justify-content:space-between;gap:8px;font:11.5px var(--mono);color:var(--fg-3);margin-top:6px}
+
+/* Charts */
+.readout{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;min-height:22px;font:12.5px var(--mono);color:var(--fg-2);margin-bottom:10px}
+.readout .when{color:var(--fg)}
+.readout .it{display:inline-flex;align-items:center;gap:6px}
+.readout .it i{width:7px;height:7px}
+.chart{position:relative;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .b{opacity:.78}
+.chart .b.on{opacity:1}
+svg text{fill:var(--fg-3);font:11.5px var(--mono)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font:12px var(--mono);color:var(--fg-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:8px;height:8px}
+.legend .ma{width:14px;height:0;border-top:1.5px solid var(--fg)}
+
+.months{display:flex;flex-wrap:wrap;gap:20px 22px;min-height:150px;align-items:flex-end}
+.month{display:flex;flex-direction:column;gap:6px}
+.month .ml{font:11px var(--mono);color:var(--fg-3)}
+.month svg{display:block}
+.heat-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-top:14px;font:12px var(--mono);color:var(--fg-3)}
+.ramp{display:inline-flex;align-items:center;gap:3px}
+.ramp i{width:10px;height:10px}
+
+.rhythm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px 56px;align-items:start}
+@media (max-width:900px){.rhythm{grid-template-columns:minmax(0,1fr)}}
+.min0{min-width:0}
+
+/* Breakdown table */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl .pc{color:var(--fg-3);font-size:12px;margin-left:10px;display:inline-block;min-width:44px}
+.tbl .sbar{display:inline-block;vertical-align:middle;width:calc(100% - 58px)}
+.tbl th{font:500 11.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg-3);text-align:right;padding:0 0 8px 12px;border-bottom:1px solid var(--rule);white-space:nowrap}
+.tbl td{padding:12px 0 12px 16px;text-align:right;font-family:var(--mono);border-bottom:1px dashed var(--rule-2);white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left;padding-left:0}
+.tbl td:first-child{font-family:var(--sans)}
+.tbl .nm{display:flex;align-items:center;gap:8px}
+.tbl .nm i{width:8px;height:8px;flex:none}
+.tbl .nm small{display:block;color:var(--fg-3);font:11px var(--mono)}
+.tbl .share{width:26%;text-align:left}
+.tbl .sbar{height:4px;background:var(--well);position:relative}
+.tbl .sbar span{position:absolute;inset:0 auto 0 0}
+.tbl .est{color:var(--fg-3);font-size:11px;margin-left:4px}
+.tbl tr:last-child td{border-bottom:0}
+@media (max-width:640px){.tbl .opt{display:none}.tbl .share{width:28%}}
+.tblwrap{overflow-x:auto}
+
+.empty{font:12.5px var(--mono);color:var(--fg-3);padding:24px 0}
+footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--rule);font-size:12px;color:var(--fg-3);line-height:1.75;max-width:84ch}
+footer p{margin:0 0 6px}
+footer code{font-family:var(--mono);color:var(--fg-2)}
+</style>
+
+<div class="page">
+  <div class="bar">
+    <div class="bar-in">
+      <div class="brand"><b aria-hidden="true"></b>usage</div>
+      <div class="tabs src" id="srcTabs" role="group" aria-label="来源"></div>
+      <div class="tabs rng" id="rngTabs" role="group" aria-label="时间范围">
+        <button type="button" id="rg-all" data-r="all" aria-pressed="true">全部</button>
+        <button type="button" id="rg-30" data-r="30" aria-pressed="false">30 天</button>
+        <button type="button" id="rg-7" data-r="7" aria-pressed="false">7 天</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status" id="status">读取数据中</div>
+
+  <section class="hero">
+    <div>
+      <div class="metric-sw" role="group" aria-label="主指标">
+        <button type="button" id="mt-cost" data-m="cost" aria-pressed="true">费用</button>
+        <button type="button" id="mt-tok" data-m="tok" aria-pressed="false">token</button>
+      </div>
+      <div class="big" id="big">—</div>
+      <div class="hero-sub" id="heroSub"></div>
+      <div class="spark" id="spark"></div>
+    </div>
+    <div>
+      <div class="sh"><h2 id="compTitle">构成</h2><span class="aside" id="compAside"></span></div>
+      <div class="comp-bar" id="compBar" aria-hidden="true"></div>
+      <div class="comp" id="comp"></div>
+    </div>
+  </section>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section class="sec" id="quotaSec">
+    <div class="sh"><h2>订阅额度</h2><span class="aside" id="quotaAside"></span></div>
+    <div class="quotas" id="quotas"></div>
+  </section>
+
+  <section class="sec">
+    <div class="sh"><h2>每日</h2><div class="legend" id="dailyLegend"></div></div>
+    <div class="readout" id="dailyRead"></div>
+    <div class="chart" id="daily"></div>
+  </section>
+
+  <section class="sec">
+    <div class="rhythm">
+      <div class="min0">
+        <div class="sh"><h2>活动</h2><span class="aside" id="heatAside"></span></div>
+        <div class="months" id="months"></div>
+        <div class="heat-foot"><span id="heatRead">悬停或点按方格查看当天</span>
+          <span class="ramp">少<i style="background:var(--heat-0)"></i><i style="background:var(--heat-1)"></i><i style="background:var(--heat-2)"></i><i style="background:var(--heat-3)"></i><i style="background:var(--heat-4)"></i>多</span></div>
+      </div>
+      <div class="min0">
+        <div class="sh"><h2>节律</h2><span class="aside" id="punchAside"></span></div>
+        <div class="chart" id="punch"></div>
+        <div class="heat-foot"><span id="punchRead"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sh"><h2>明细</h2><span class="aside" id="tblAside"></span></div>
+    <div class="tblwrap"><table class="tbl" id="tbl"></table></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script type="application/json" id="sample">__SAMPLE__</script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const S = (tag, a, p) => { const n = document.createElementNS(NS, tag); for (const k in a) n.setAttribute(k, a[k]); if (p) p.appendChild(n); return n; };
+  const E = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+  /* ---------- formatting ---------- */
+  const sig = (v) => (v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2)).replace(/\.?0+$/, '');
+  const tok = (n) => n >= 1e9 ? sig(n / 1e9) + 'B' : n >= 1e6 ? sig(n / 1e6) + 'M' : n >= 1e3 ? sig(n / 1e3) + 'K' : String(Math.round(n));
+  const usd = (n) => n >= 1e4 ? '$' + sig(n / 1e3) + 'K' : '$' + (n >= 100 ? Math.round(n).toLocaleString('en') : n.toFixed(2));
+  const usdFull = (n) => '$' + Math.round(n).toLocaleString('en');
+  const int = (n) => Math.round(n).toLocaleString('en');
+  const pct = (x) => x >= 0.995 ? '100%' : x >= 0.1 ? (x * 100).toFixed(1) + '%' : x >= 0.001 ? (x * 100).toFixed(2) + '%' : '<0.1%';
+  const D = (s) => new Date(s + 'T00:00:00Z');
+  const K = (d) => d.toISOString().slice(0, 10);
+  const add = (d, n) => new Date(d.getTime() + n * 864e5);
+  const diff = (a, b) => Math.round((b - a) / 864e5);
+  const WD = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  const mdz = (d) => (d.getUTCMonth() + 1) + '/' + String(d.getUTCDate()).padStart(2, '0');
+  const mdLong = (d) => (d.getUTCMonth() + 1) + ' 月 ' + d.getUTCDate() + ' 日';
+
+  /* ---------- names & colors ---------- */
+  const SRC_COLORS = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)'];
+  const MODEL_COLORS = ['var(--c4)', 'var(--c5)', 'var(--c1)', 'var(--c3)', 'var(--c6)', 'var(--c2)', 'var(--c7)'];
+  const MODEL_NAMES = {'claude-opus-5-5': 'Opus 5.5', 'claude-opus-5': 'Opus 5', 'claude-fable-5-1': 'Fable 5.1', 'claude-fable-5': 'Fable 5',
+    'claude-haiku-5-5': 'Haiku 5.5', 'other': '其他模型', 'sample-model-a': '示例模型 A', 'sample-model-b': '示例模型 B'};
+  const modelName = (m) => MODEL_NAMES[m] || m.replace(/^claude-/, '');
+
+  let data, srcColor = {}, state = {src: 'all', range: 'all', metric: 'cost'};
+  try { Object.assign(state, JSON.parse(localStorage.getItem('usage-console') || '{}')); } catch (e) {}
+  const save = () => { try { localStorage.setItem('usage-console', JSON.stringify(state)); } catch (e) {} };
+
+  /* ---------- row math ---------- */
+  const rowTok = (r) => (r.in || 0) + (r.out || 0) + (r.cr || 0) + (r.cw || 0);
+  function rowCost(r) {
+    if (r.cost != null) return r.cost;
+    const p = data.prices.per_mtok[r.model] || data.prices.per_mtok.other;
+    if (!p) return 0;
+    return ((r.in || 0) * p[0] + (r.out || 0) * p[1] + (r.cr || 0) * p[2] + (r.cw || 0) * p[3]) / 1e6;
+  }
+  const val = (r) => state.metric === 'cost' ? rowCost(r) : rowTok(r);
+  const fmt = (n) => state.metric === 'cost' ? usd(n) : tok(n);
+  const groupKey = (r) => state.src === 'all' ? r.src : r.model;
+  const srcName = (id) => (data.sources.find(s => s.id === id) || {name: id}).name;
+  const groupName = (g) => state.src === 'all' ? srcName(g) : modelName(g);
+
+  function view() {
+    const rows = data.rows.filter(r => state.src === 'all' || r.src === state.src);
+    const last = D(data.generated.slice(0, 10));
+    const firstAll = rows.length ? D(rows.reduce((m, r) => r.d < m ? r.d : m, rows[0].d)) : last;
+    const start = state.range === 'all' ? firstAll : add(last, -(Number(state.range) - 1));
+    const inR = rows.filter(r => D(r.d) >= start && D(r.d) <= last);
+    let prev = null;
+    if (state.range !== 'all') {
+      const ps = add(start, -Number(state.range)), pe = add(start, -1);
+      prev = rows.filter(r => D(r.d) >= ps && D(r.d) <= pe).reduce((s, r) => s + val(r), 0);
+    }
+    const groups = {};
+    inR.forEach(r => { const g = groupKey(r); groups[g] = (groups[g] || 0) + val(r); });
+    const order = Object.entries(groups).sort((a, b) => b[1] - a[1]).map(e => e[0]);
+    const color = {};
+    order.forEach((g, i) => color[g] = state.src === 'all' ? srcColor[g] : MODEL_COLORS[i % MODEL_COLORS.length]);
+    const byDay = new Map();
+    inR.forEach(r => { const m = byDay.get(r.d) || byDay.set(r.d, {}).get(r.d); const g = groupKey(r); m[g] = (m[g] || 0) + val(r); });
+    const total = inR.reduce((s, r) => s + val(r), 0);
+    const actual = inR.filter(r => r.cost != null).length, estd = inR.length - actual;
+    return {rows, inR, start, last, prev, groups, order, color, byDay, total, firstAll,
+      costKind: state.metric !== 'cost' ? '' : estd && actual ? 'est + actual' : actual ? 'actual' : 'est'};
+  }
+
+  /* ---------- top controls ---------- */
+  function renderTabs() {
+    const box = $('srcTabs'); box.replaceChildren();
+    [{id: 'all', name: '全部来源'}].concat(data.sources).forEach(s => {
+      const b = E('button'); b.type = 'button'; b.id = 'src-' + s.id; b.dataset.s = s.id;
+      if (s.id !== 'all') { const sw = E('span', 'sw'); sw.style.background = srcColor[s.id]; b.appendChild(sw); }
+      b.append(s.name); b.setAttribute('aria-pressed', String(state.src === s.id));
+      b.addEventListener('click', () => { state.src = s.id; save(); render(); });
+      box.appendChild(b);
+    });
+    document.querySelectorAll('#rngTabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.r === state.range)));
+    document.querySelectorAll('.metric-sw button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === state.metric)));
+  }
+
+  function renderStatus() {
+    const st = $('status'); st.replaceChildren();
+    const gen = new Date(data.generated), age = (Date.now() - gen) / 36e5;
+    const when = gen.toLocaleString('zh-CN', {timeZone: data.timezone, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
+    st.append(E('span', age < 36 ? 'ok' : 'stale', age < 36 ? '● 已同步' : '● 数据已过期 ' + Math.floor(age / 24) + ' 天'),
+      E('span', null, '更新于 ' + when + ' CT'), E('span', null, data.sources.length + ' 个来源'));
+    if (data.sample) st.appendChild(E('span', 'flag', '示例数据'));
+    if (!data.prices.verified) st.appendChild(E('span', 'flag', '价格待核实'));
+  }
+
+  /* ---------- hero ---------- */
+  function renderHero(v) {
+    const big = $('big'); big.replaceChildren();
+    const sub = $('heroSub'); sub.replaceChildren();
+    if (state.metric === 'cost') { big.append(usdFull(v.total)); sub.appendChild(E('span', 'delta', v.costKind)); }
+    else { big.append(tok(v.total)); big.appendChild(E('span', 'u', 'tok')); }
+    const span = diff(v.start, v.last) + 1;
+    if (v.prev != null && v.prev > 0) {
+      const ch = v.total / v.prev - 1;
+      sub.appendChild(E('span', 'delta ' + (ch >= 0 ? 'up' : 'down'), (ch >= 0 ? '▲ ' : '▼ ') + Math.abs(ch * 100).toFixed(0) + '% 比前 ' + state.range + ' 天'));
+    }
+    sub.append(E('span', null, '日均 ' + fmt(v.total / span)), E('span', null, mdz(v.start) + ' – ' + mdz(v.last) + '，' + span + ' 天'));
+    // sparkline
+    const box = $('spark'); box.replaceChildren();
+    const W = Math.max(240, box.clientWidth), H = 56;
+    const ks = [...v.byDay.keys()].sort(), dn = ks.find((d, i) => i + 4 < ks.length && diff(D(d), D(ks[i + 4])) < 14);
+    const s0 = state.range === 'all' && dn ? D(dn) : v.start;
+    const days = []; for (let d = s0; d <= v.last; d = add(d, 1)) days.push(d);
+    const ys = days.map(d => { const m = v.byDay.get(K(d)); return m ? Object.values(m).reduce((a, b) => a + b, 0) : 0; });
+    const mx = Math.max(1e-9, ...ys);
+    const x = (i) => days.length < 2 ? W / 2 : i / (days.length - 1) * W, y = (n) => H - 2 - n / mx * (H - 6);
+    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'none', 'aria-hidden': 'true'}, box);
+    let d = ''; ys.forEach((n, i) => d += (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(n).toFixed(1));
+    S('path', {d: d + `L${W},${H}L0,${H}Z`, fill: 'var(--c1)', 'fill-opacity': .1}, svg);
+    S('path', {d, fill: 'none', stroke: 'var(--c1)', 'stroke-width': 1.25, 'vector-effect': 'non-scaling-stroke'}, svg);
+    S('circle', {cx: x(ys.length - 1), cy: y(ys[ys.length - 1]), r: 2.5, fill: 'var(--c1)'}, svg);
+
+    $('compTitle').textContent = state.src === 'all' ? '按来源' : '按模型';
+    $('compAside').textContent = state.metric === 'cost' ? '费用占比' : 'token 占比';
+    const bar = $('compBar'), comp = $('comp'); bar.replaceChildren(); comp.replaceChildren();
+    if (!v.total) { comp.appendChild(E('div', 'empty', '这段时间没有用量')); return; }
+    v.order.forEach(g => {
+      const share = v.groups[g] / v.total;
+      const s = E('span'); s.style.background = v.color[g]; s.style.flex = String(Math.max(share, 0.003)); bar.appendChild(s);
+      const row = E('div', 'comp-row'), i = E('i'); i.style.background = v.color[g];
+      row.append(i, E('span', 'n', groupName(g)), E('span', 'v', fmt(v.groups[g])), E('span', 'p', pct(share)));
+      comp.appendChild(row);
+    });
+  }
+
+  /* ---------- KPIs ---------- */
+  function streaks(rows) {
+    const days = [...new Set(rows.filter(r => rowTok(r) > 0 || r.cost > 0).map(r => r.d))].sort().map(D);
+    let best = 0, run = 0, p = null;
+    days.forEach(d => { run = p && diff(p, d) === 1 ? run + 1 : 1; best = Math.max(best, run); p = d; });
+    const last = D(data.generated.slice(0, 10));
+    return {best, current: p && diff(p, last) <= 1 ? run : 0};
+  }
+  function renderKpis(v) {
+    const box = $('kpis'); box.replaceChildren();
+    const sessions = v.inR.reduce((s, r) => s + (r.sessions || 0), 0);
+    const requests = v.inR.reduce((s, r) => s + (r.requests || 0), 0);
+    const activeDays = new Set(v.inR.map(r => r.d)).size, span = diff(v.start, v.last) + 1;
+    let busiest = null; v.byDay.forEach((m, d) => { const t = Object.values(m).reduce((a, b) => a + b, 0); if (!busiest || t > busiest.t) busiest = {d, t}; });
+    const st = streaks(v.rows);
+    const items = [];
+    if (sessions) items.push({k: '会话', v: int(sessions), d: activeDays ? '每活跃日 ' + (sessions / activeDays).toFixed(1) : ''});
+    if (requests) items.push({k: 'API 请求', v: int(requests), d: '仅账单类来源'});
+    items.push({k: '活跃天数', v: String(activeDays), small: '/' + span, d: pct(activeDays / span) + ' 的日子'});
+    items.push({k: '最高的一天', v: busiest ? mdz(D(busiest.d)) : '—', d: busiest ? WD[D(busiest.d).getUTCDay()] + ' · ' + fmt(busiest.t) : ''});
+    items.push({k: '连续', tag: '全部', v: String(st.current), small: ' 天', d: '最长 ' + st.best + ' 天'});
+    const ls = data.longest_session;
+    if (ls && (state.src === 'all' || state.src === ls.src)) {
+      const m = Math.round(ls.ms / 6e4), dd = Math.floor(m / 1440), hh = Math.floor(m % 1440 / 60), mm = m % 60;
+      items.push({k: '最长会话', tag: '全部', v: dd ? dd + 'd ' + hh + 'h' : hh + 'h ' + mm + 'm', d: srcName(ls.src) + ' · ' + mdz(D(ls.start)) + ' 起'});
+    }
+    box.style.setProperty('--n', items.length);
+    items.forEach(it => {
+      const c = E('div', 'kpi'), k = E('div', 'k', it.k);
+      if (it.tag) k.appendChild(E('em', null, it.tag));
+      const vv = E('div', 'v', it.v); if (it.small) vv.appendChild(E('small', null, it.small));
+      c.append(k, vv, E('div', 'd', it.d)); box.appendChild(c);
+    });
+  }
+
+  /* ---------- quotas ---------- */
+  function renderQuotas() {
+    const qs = (data.quotas || []).filter(q => state.src === 'all' || !q.src || q.src === state.src);
+    $('quotaSec').hidden = !qs.length;
+    const box = $('quotas'); box.replaceChildren();
+    $('quotaAside').textContent = qs.some(q => q.sample) ? '示例' : '';
+    qs.forEach(q => {
+      const c = E('div', 'q'), top = E('div', 'top'), tr = E('div', 'track'), fill = E('span'), bot = E('div', 'bot');
+      top.append(E('span', null, q.name + ' · ' + q.window), E('span', 'p', Math.round(q.used * 100) + '%'));
+      fill.style.width = Math.min(100, q.used * 100) + '%';
+      fill.style.background = q.used >= .9 ? 'var(--c6)' : q.used >= .7 ? 'var(--c1)' : 'var(--c2)';
+      tr.appendChild(fill);
+      const left = (new Date(q.resets) - Date.now()) / 36e5;
+      bot.append(E('span', null, '剩余 ' + Math.max(0, Math.round((1 - q.used) * 100)) + '%'),
+        E('span', null, left > 0 ? (left >= 24 ? Math.floor(left / 24) + 'd ' + Math.round(left % 24) + 'h' : Math.max(1, Math.round(left)) + 'h') + ' 后重置' : '已重置'));
+      c.append(top, tr, bot); box.appendChild(c);
+    });
+  }
+
+  /* ---------- daily chart ---------- */
+  function niceStep(max, n) { const raw = max / n, mag = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(s => s * mag).find(s => raw <= s); }
+  function renderDaily(v) {
+    const box = $('daily'), read = $('dailyRead'), leg = $('dailyLegend');
+    box.replaceChildren(); read.replaceChildren(); leg.replaceChildren();
+    v.order.forEach(g => { const s = E('span'), i = E('i'); i.style.background = v.color[g]; s.append(i, groupName(g)); leg.appendChild(s); });
+    const ma = E('span'); ma.append(E('i', 'ma'), '7 日均线'); leg.appendChild(ma);
+    if (!v.total) { box.appendChild(E('div', 'empty', '这段时间没有用量')); return; }
+    // All-time view starts at the first busy stretch so a lone early day doesn't leave months of empty axis.
+    let start = v.start;
+    if (state.range === 'all') {
+      const ds = [...v.byDay.keys()].sort();
+      const dense = ds.find((d, i) => i + 4 < ds.length && diff(D(d), D(ds[i + 4])) < 14);
+      if (dense) start = D(dense);
+    }
+    const days = []; for (let d = start; d <= v.last; d = add(d, 1)) days.push(d);
+    const tot = days.map(d => { const m = v.byDay.get(K(d)); return m ? Object.values(m).reduce((a, b) => a + b, 0) : 0; });
+    const avg = tot.map((_, i) => { const s = tot.slice(Math.max(0, i - 6), i + 1); return s.reduce((a, b) => a + b, 0) / s.length; });
+    const sorted = tot.filter(t => t > 0).sort((a, b) => a - b), p95 = sorted[Math.floor(sorted.length * .95)] || 0, mx = Math.max(...tot);
+    const cap = mx > p95 * 2.2 && sorted.length > 10 ? p95 * 1.5 : mx;
+    const W = Math.max(300, box.clientWidth), narrow = W < 600, H = narrow ? 220 : 280;
+    const m = {t: 18, r: 4, b: 24, l: narrow ? 40 : 52};
+    const step = niceStep(cap, narrow ? 3 : 4), top = Math.ceil(cap / step) * step;
+    const iw = W - m.l - m.r, bw = iw / days.length, barW = Math.max(1, bw * (days.length > 60 ? .72 : .62));
+    const X = (i) => m.l + i * bw + bw / 2, Y = (n) => H - m.b - Math.min(n, top) / top * (H - m.t - m.b);
+    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': '每日用量，按' + (state.src === 'all' ? '来源' : '模型') + '堆叠'}, box);
+    for (let t = 0; t <= top + 1e-9; t += step) {
+      S('line', {x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: t ? 'var(--rule)' : 'var(--rule-2)', 'stroke-dasharray': t ? '2 4' : ''}, svg);
+      const tx = S('text', {x: m.l - 8, y: Y(t) + 3.5, 'text-anchor': 'end'}, svg); tx.textContent = fmt(t).replace('.00', '');
+    }
+    const nT = narrow ? 4 : 7, every = Math.max(1, Math.round(days.length / nT));
+    days.forEach((d, i) => { if (i % every === 0) { const tx = S('text', {x: X(i), y: H - 6, 'text-anchor': 'middle'}, svg); tx.textContent = mdz(d); } });
+    const cols = S('g', {}, svg);
+    days.forEach((d, i) => {
+      const mrec = v.byDay.get(K(d)); if (!mrec) return;
+      let acc = 0;
+      v.order.slice().reverse().forEach(g => {
+        const n = mrec[g] || 0; if (!n) return;
+        const y0 = Y(acc), y1 = Y(acc + n); acc += n;
+        if (y0 - y1 > 0.2) S('rect', {x: X(i) - barW / 2, y: y1, width: barW, height: y0 - y1, fill: v.color[g], 'data-i': i, class: 'b'}, cols);
+      });
+      if (tot[i] > top) {
+        const yb = m.t + 8;
+        S('path', {d: `M${X(i) - barW / 2 - 1},${yb + 3}L${X(i) + barW / 2 + 1},${yb - 1}M${X(i) - barW / 2 - 1},${yb + 7}L${X(i) + barW / 2 + 1},${yb + 3}`, stroke: 'var(--bg)', 'stroke-width': 2.5}, svg);
+        const tx = S('text', {x: X(i), y: m.t - 6, 'text-anchor': 'middle', style: 'fill:var(--fg)'}, svg); tx.textContent = fmt(tot[i]);
+      }
+    });
+    let pd = ''; avg.forEach((a, i) => pd += (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(a).toFixed(1));
+    S('path', {d: pd, fill: 'none', stroke: 'var(--fg)', 'stroke-width': 1.25, 'stroke-linejoin': 'round', opacity: .85}, svg);
+    const hl = S('rect', {y: m.t, height: H - m.t - m.b, width: bw, fill: 'var(--fg)', 'fill-opacity': .06, visibility: 'hidden'}, svg);
+    const show = (i) => {
+      read.replaceChildren(); const d = days[i], mrec = v.byDay.get(K(d)) || {};
+      read.appendChild(E('span', 'when', mdz(d) + ' ' + WD[d.getUTCDay()]));
+      read.appendChild(E('span', null, '合计 ' + fmt(tot[i])));
+      v.order.forEach(g => { if (!mrec[g]) return; const it = E('span', 'it'), ic = E('i'); ic.style.background = v.color[g]; it.append(ic, groupName(g) + ' ' + fmt(mrec[g])); read.appendChild(it); });
+      read.appendChild(E('span', null, '7 日均 ' + fmt(avg[i])));
+      hl.setAttribute('x', X(i) - bw / 2); hl.setAttribute('visibility', 'visible');
+      cols.querySelectorAll('.b.on').forEach(b => b.classList.remove('on')); cols.querySelectorAll(`.b[data-i="${i}"]`).forEach(b => b.classList.add('on'));
+    };
+    const idx = (ev) => { const r = svg.getBoundingClientRect(); return Math.max(0, Math.min(days.length - 1, Math.floor(((ev.clientX - r.left) * W / r.width - m.l) / bw))); };
+    svg.addEventListener('pointermove', (ev) => show(idx(ev)));
+    svg.addEventListener('pointerdown', (ev) => show(idx(ev)));
+    svg.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse') show(days.length - 1); });
+    show(days.length - 1);
+  }
+
+  /* ---------- month blocks ---------- */
+  function renderMonths(v) {
+    const box = $('months'); box.replaceChildren();
+    const tot = new Map(); v.byDay.forEach((m, d) => tot.set(d, Object.values(m).reduce((a, b) => a + b, 0)));
+    const keys = [...tot.keys()].sort();
+    if (!keys.length) { box.appendChild(E('div', 'empty', '这段时间没有用量')); $('heatAside').textContent = ''; return; }
+    const dense = keys.find((d, i) => i + 4 < keys.length && diff(D(d), D(keys[i + 4])) < 14) || keys[0];
+    const skipped = keys.filter(k => k < dense).length;
+    const vals = [...tot.values()].filter(t => t > 0).sort((a, b) => a - b);
+    const q = (p) => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))];
+    const cuts = [q(.25), q(.5), q(.75)];
+    const lvl = (t) => !t ? 0 : t <= cuts[0] ? 1 : t <= cuts[1] ? 2 : t <= cuts[2] ? 3 : 4;
+    const first = D(dense.slice(0, 8) + '01'), last = v.last;
+    const gap = 3; let nWeeks = 0;
+    for (let mo = first; mo <= last; mo = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 1))) {
+      const e = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 0)); nWeeks += Math.ceil((((mo.getUTCDay() + 6) % 7) + e.getUTCDate()) / 7);
+    }
+    const months = Math.round(diff(first, last) / 30) + 1, avail = box.clientWidth - (months - 1) * 22 - 2;
+    const cell = Math.max(7, Math.min(20, Math.floor(avail / nWeeks) - gap));
+    for (let mo = first; mo <= last; mo = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 1))) {
+      const end = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 0));
+      const off = (mo.getUTCDay() + 6) % 7, weeks = Math.ceil((off + end.getUTCDate()) / 7);
+      const wrap = E('div', 'month');
+      const Wd = weeks * (cell + gap) - gap, Hd = 7 * (cell + gap) - gap;
+      const svg = S('svg', {width: Wd, height: Hd, viewBox: `0 0 ${Wd} ${Hd}`, role: 'img', 'aria-label': (mo.getUTCMonth() + 1) + ' 月活动'}, wrap);
+      let sum = 0;
+      for (let dd = 1; dd <= end.getUTCDate(); dd++) {
+        const d = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth(), dd));
+        const pos = off + dd - 1, col = Math.floor(pos / 7), row = pos % 7;
+        const k = K(d), t = tot.get(k) || 0; sum += t;
+        const future = d > last;
+        const r = S('rect', {x: col * (cell + gap), y: row * (cell + gap), width: cell, height: cell, rx: 1.5,
+          fill: future ? 'none' : `var(--heat-${lvl(t)})`, stroke: future ? 'var(--rule)' : 'none', 'stroke-dasharray': future ? '2 2' : ''}, svg);
+        if (!future) {
+          const showD = () => { $('heatRead').textContent = mdz(d) + ' ' + WD[d.getUTCDay()] + ' · ' + (t ? fmt(t) : '无活动'); };
+          r.addEventListener('pointerenter', showD); r.addEventListener('pointerdown', showD);
+        }
+      }
+      wrap.appendChild(E('div', 'ml', String(mo.getUTCFullYear()).slice(2) + '.' + String(mo.getUTCMonth() + 1).padStart(2, '0') + '  ' + fmt(sum)));
+      box.appendChild(wrap);
+    }
+    $('heatAside').textContent = new Set(keys).size + ' 个活跃日' + (skipped ? ' · 更早的 ' + skipped + ' 天未画出' : '');
+  }
+
+  /* ---------- breakdown ---------- */
+  function renderTable(v) {
+    const t = $('tbl'); t.replaceChildren();
+    const by = {};
+    v.inR.forEach(r => {
+      const k = r.src + '|' + r.model, o = by[k] || (by[k] = {src: r.src, model: r.model, in: 0, out: 0, cr: 0, cw: 0, cost: 0, est: false});
+      o.in += r.in || 0; o.out += r.out || 0; o.cr += r.cr || 0; o.cw += r.cw || 0; o.cost += rowCost(r); if (r.cost == null) o.est = true;
+    });
+    const list = Object.values(by).map(o => ({...o, v: state.metric === 'cost' ? o.cost : o.in + o.out + o.cr + o.cw})).sort((a, b) => b.v - a.v);
+    $('tblAside').textContent = list.length + ' 个模型';
+    if (!list.length) { t.appendChild(E('caption', 'empty', '这段时间没有用量')); return; }
+    const head = E('thead'), hr = E('tr');
+    [['模型', ''], ['占比', 'share'], ['输入', 'opt'], ['输出', 'opt'], ['缓存读', 'opt'], ['缓存写', 'opt'], ['费用', '']].forEach(([n, c]) => { const th = E('th', c, n); th.scope = 'col'; hr.appendChild(th); });
+    head.appendChild(hr); t.appendChild(head);
+    const body = E('tbody'), max = list[0].v || 1;
+    list.forEach((o, idx) => {
+      const tr = E('tr'), color = state.src === 'all' ? srcColor[o.src] : v.color[o.model] || MODEL_COLORS[idx % MODEL_COLORS.length];
+      const nm = E('td'), w = E('div', 'nm'), i = E('i'), lab = E('div', null, modelName(o.model));
+      i.style.background = color; lab.appendChild(E('small', null, srcName(o.src))); w.append(i, lab); nm.appendChild(w);
+      const sh = E('td', 'share'), sb = E('div', 'sbar'), fill = E('span');
+      fill.style.width = (o.v / max * 100) + '%'; fill.style.background = color; sb.appendChild(fill);
+      sh.append(sb, E('span', 'pc', pct(o.v / (v.total || 1))));
+      const cost = E('td', null, usd(o.cost)); if (o.est) cost.appendChild(E('span', 'est', 'est'));
+      tr.append(nm, sh, E('td', 'opt', tok(o.in)), E('td', 'opt', tok(o.out)), E('td', 'opt', o.cr ? tok(o.cr) : '—'), E('td', 'opt', o.cw ? tok(o.cw) : '—'), cost);
+      body.appendChild(tr);
+    });
+    t.appendChild(body);
+  }
+
+  /* ---------- hours ---------- */
+  function renderRhythm() {
+    const box = $('punch'), read = $('punchRead'); box.replaceChildren();
+    const grid = Array.from({length: 7}, () => new Array(24).fill(0));
+    Object.entries(data.punch || {}).forEach(([s, rows]) => { if (state.src === 'all' || s === state.src) rows.forEach((r, d) => r.forEach((n, hh) => grid[d][hh] += n)); });
+    const flat = grid.flat(), mx = Math.max(1e-9, ...flat), sum = flat.reduce((a, b) => a + b, 0);
+    const hourTot = grid[0].map((_, hh) => grid.reduce((s, r) => s + r[hh], 0)), peak = hourTot.indexOf(Math.max(...hourTot));
+    $('punchAside').textContent = '高峰 ' + String(peak).padStart(2, '0') + ':00 · CT';
+    const W = Math.max(300, box.clientWidth), lw = 28, cw = (W - lw) / 24, ch = Math.min(26, Math.max(16, cw)), H = 7 * ch + 22;
+    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': '每周各时段的消息分布，高峰 ' + peak + ' 点'}, box);
+    const DN = ['一', '二', '三', '四', '五', '六', '日'];
+    grid.forEach((row, d) => {
+      const tx = S('text', {x: 0, y: d * ch + ch / 2 + 4}, svg); tx.textContent = DN[d];
+      row.forEach((n, hh) => {
+        const r = n ? Math.max(1.5, Math.sqrt(n / mx) * Math.min(cw, ch) * 0.46) : 1;
+        S('circle', {cx: lw + hh * cw + cw / 2, cy: d * ch + ch / 2, r, fill: n ? (hh === peak ? 'var(--c2)' : 'var(--heat-3)') : 'var(--rule-2)'}, svg);
+      });
+    });
+    [0, 6, 12, 18, 23].forEach(hh => { const tx = S('text', {x: lw + hh * cw + cw / 2, y: H - 4, 'text-anchor': 'middle'}, svg); tx.textContent = String(hh).padStart(2, '0'); });
+    const ring = S('rect', {width: cw, height: ch, fill: 'none', stroke: 'var(--fg-2)', 'stroke-width': 1, visibility: 'hidden'}, svg);
+    const show = (d, hh) => {
+      ring.setAttribute('x', lw + hh * cw); ring.setAttribute('y', d * ch); ring.setAttribute('visibility', 'visible');
+      read.replaceChildren(E('span', 'when', '周' + DN[d] + ' ' + String(hh).padStart(2, '0') + ':00'), E('span', null, int(grid[d][hh]) + ' 条消息'), E('span', null, pct(sum ? grid[d][hh] / sum : 0)));
+    };
+    const at = (ev) => { const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * W / r.width, y = (ev.clientY - r.top) * W / r.width;
+      return [Math.max(0, Math.min(6, Math.floor(y / ch))), Math.max(0, Math.min(23, Math.floor((x - lw) / cw)))]; };
+    svg.addEventListener('pointermove', (ev) => show(...at(ev)));
+    svg.addEventListener('pointerdown', (ev) => show(...at(ev)));
+    svg.addEventListener('pointerleave', () => { ring.setAttribute('visibility', 'hidden'); read.replaceChildren(E('span', null, '共 ' + int(sum) + ' 条消息，悬停或点按查看某个时段')); });
+    read.replaceChildren(E('span', null, '共 ' + int(sum) + ' 条消息，悬停或点按查看某个时段'));
+  }
+
+  function renderFoot() {
+    const f = $('foot'); f.replaceChildren();
+    const p1 = E('p'); p1.append('会话记录类来源由本机脚本读取，例如 Claude Code 读 ', E('code', null, '~/.claude/projects'), '；token 含子代理，同一条回复只计一次，口径与 /stats 不同。账单类来源用平台返回的实际金额。');
+    const p2 = E('p', null, '费用标 est 的是按单价估算，标 actual 的是平台账单金额。日期与时段按美国中部时间划分。');
+    f.append(p1, p2);
+    if (!data.prices.verified) f.appendChild(E('p', null, '模型单价是占位值，尚未核实，估算费用仅供看版式。'));
+    if (data.sample) f.appendChild(E('p', null, '示例数据：Claude Code 的总量与各模型用量取自 10 月 24 日的 /stats，每日分布为示例；Codex CLI、Anthropic API 和订阅额度全部为示例。'));
+  }
+
+  function render() {
+    if (state.src !== 'all' && !data.sources.some(s => s.id === state.src)) state.src = 'all';
+    renderTabs(); renderStatus();
+    const v = view();
+    renderHero(v); renderKpis(v); renderQuotas(); renderDaily(v); renderMonths(v); renderTable(v); renderRhythm(); renderFoot();
+  }
+
+  document.querySelectorAll('#rngTabs button').forEach(b => b.addEventListener('click', () => { state.range = b.dataset.r; save(); render(); }));
+  document.querySelectorAll('.metric-sw button').forEach(b => b.addEventListener('click', () => { state.metric = b.dataset.m; save(); render(); }));
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => data && render(), 150); });
+
+  const sample = () => JSON.parse($('sample').textContent);
+  fetch('data/usage.json', {cache: 'no-store'})
+    .then(r => r.ok ? r.json() : null)
+    .then(d => d && Array.isArray(d.rows) && Array.isArray(d.sources) ? d : sample())
+    .catch(sample)
+    .then(d => { data = d; data.prices = data.prices || {verified: true, per_mtok: {}}; data.sources.forEach((s, i) => srcColor[s.id] = SRC_COLORS[i % SRC_COLORS.length]); render(); })
+    .catch(err => { $('status').textContent = '数据没有读到（' + err.message + '），稍后刷新页面再试。'; });
+})();
+</script>

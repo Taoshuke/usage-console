@@ -93,6 +93,8 @@ svg text{fill:var(--text-3);font:11px var(--mono)}
 .notice p{margin:0;flex:1;min-width:0}
 .notice button{appearance:none;border:0;background:none;color:inherit;cursor:pointer;padding:4px;border-radius:6px;display:inline-flex;opacity:.75}
 .notice button:hover{opacity:1}
+.notice.error{background:color-mix(in srgb,var(--crit) 12%,transparent);color:var(--crit)}
+body.failed .seg,body.failed #noticeClose,body.failed main>:not(.notice):not(footer){display:none}
 
 /* Cards */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow);min-width:0}
@@ -336,6 +338,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
     en: {
       allSources: 'All sources', all: 'All', d30: '30D', d7: '7D', lang: '中文', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark',
       demoNotice: 'Showing sample data. Run the collector to load your own usage.',
+      loadFailed: 'Could not load usage data ({e}). Check the data source and reload the page.',
       pricesNotice: 'Model prices are placeholders and have not been verified; estimated costs are indicative only.',
       cost: 'Cost', tokens: 'Tokens', spend: 'Estimated cost', tokUsed: 'Tokens used',
       bySource: 'By source', byModel: 'By model', vsPrev: 'vs. prior {n} days', perDay: '{v} / day',
@@ -361,6 +364,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
     zh: {
       allSources: '全部来源', all: '全部', d30: '30 天', d7: '7 天', lang: 'EN', themeSystem: '跟随系统', themeLight: '浅色', themeDark: '深色',
       demoNotice: '当前显示示例数据。运行采集脚本后显示你的实际用量。',
+      loadFailed: '用量数据读取失败（{e}）。请检查数据源后刷新页面。',
       pricesNotice: '模型单价是占位值，尚未核实，预估费用仅供参考。',
       cost: '费用', tokens: 'Token', spend: '预估费用', tokUsed: 'Token 用量',
       bySource: '按来源', byModel: '按模型', vsPrev: '环比前 {n} 天', perDay: '日均 {v}',
@@ -853,18 +857,32 @@ footer a:hover{color:var(--text);text-decoration:underline}
   // Clicking the active granularity again returns to automatic (weekly beyond 60 days).
   document.querySelectorAll('#granSeg button').forEach(b => b.addEventListener('click', () => { state.gran = b.getAttribute('aria-pressed') === 'true' && state.gran === b.dataset.g ? 'auto' : b.dataset.g; store.set('gran', state.gran); render(); }));
   document.querySelectorAll('#metricSeg button').forEach(b => b.addEventListener('click', () => { state.metric = b.dataset.m; store.set('metric', state.metric); render(); }));
-  $('langBtn').addEventListener('click', () => { lang = lang === 'zh' ? 'en' : 'zh'; store.set('lang', lang); if (data) render(); });
-  $('themeBtn').addEventListener('click', () => { theme = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'; store.set('theme', theme); applyTheme(); if (data) render(); });
+  $('langBtn').addEventListener('click', () => { lang = lang === 'zh' ? 'en' : 'zh'; store.set('lang', lang); if (data) render(); else if (failure) fail(failure); });
+  $('themeBtn').addEventListener('click', () => { theme = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'; store.set('theme', theme); applyTheme(); if (data) render(); else if (failure) fail(failure); });
   addEventListener('scroll', () => $('top').classList.toggle('stuck', scrollY > 4), {passive: true});
   let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => data && render(), 120); });
   applyTheme();
 
-  const demo = () => JSON.parse($('demo').textContent);
+  // Sample data only stands in when the site has no data at all (404). A data source that fails says so
+  // instead of passing the sample off as real usage.
+  let failure = null;
+  const fail = (msg) => {
+    failure = msg; document.body.classList.add('failed');
+    $('langBtn').textContent = t('lang');
+    $('themeBtn').innerHTML = THEME_ICON[theme] + '<span>' + t(theme === 'system' ? 'themeSystem' : theme === 'light' ? 'themeLight' : 'themeDark') + '</span>';
+    const n = $('notice'); n.classList.add('error'); n.hidden = false; $('noticeText').textContent = t('loadFailed', {e: msg});
+  };
   fetch('data/usage.json', {cache: 'no-store'})
-    .then(r => r.ok ? r.json() : null)
-    .then(d => d && Array.isArray(d.rows) && Array.isArray(d.sources) ? d : demo())
-    .catch(demo)
+    .then(async r => {
+      if (r.status === 404) return JSON.parse($('demo').textContent);
+      const body = await r.text();
+      let d;
+      try { d = JSON.parse(body); } catch { throw new Error('HTTP ' + r.status); }
+      if (!r.ok || d.error) throw new Error(d.error || 'HTTP ' + r.status);
+      if (!Array.isArray(d.rows) || !Array.isArray(d.sources)) throw new Error('unexpected data format');
+      return d;
+    })
     .then(d => { data = d; data.sources.forEach((s, i) => srcColor[s.id] = PALETTE[i % PALETTE.length]); render(); })
-    .catch(err => { const n = $('notice'); n.hidden = false; $('noticeText').textContent = 'Could not load data: ' + err.message; });
+    .catch(err => fail(err.message));
 })();
 </script>

@@ -329,52 +329,54 @@ footer a:hover{color:var(--text);text-decoration:underline}
   /* ---------- i18n ---------- */
   const I18N = {
     en: {
-      allSources: 'All sources', all: 'All', d30: '30D', d7: '7D', lang: '中文', themeSystem: 'Auto', themeLight: 'Light', themeDark: 'Dark',
-      demoNotice: 'You are looking at fictional demo data. Run the collector to see your own usage.',
+      allSources: 'All sources', all: 'All', d30: '30D', d7: '7D', lang: '中文', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark',
+      demoNotice: 'Showing sample data. Run the collector to load your own usage.',
       pricesNotice: 'Model prices are placeholders and have not been verified; estimated costs are indicative only.',
-      cost: 'Cost', tokens: 'Tokens', spend: 'Estimated spend', tokUsed: 'Tokens used',
-      bySource: 'By source', byModel: 'By model', vsPrev: 'vs previous {n} days', perDay: '{v} / day',
-      est: 'est', actual: 'actual', mixed: 'est + actual',
+      cost: 'Cost', tokens: 'Tokens', spend: 'Estimated cost', tokUsed: 'Tokens used',
+      bySource: 'By source', byModel: 'By model', vsPrev: 'vs. prior {n} days', perDay: '{v} / day',
+      est: 'Est.', actual: 'Billed', mixed: 'Est. + billed',
       sessions: 'Sessions', perActive: '{v} per active day', requests: 'API requests', billingOnly: 'Billing sources only',
-      activeDays: 'Active days', ofDays: '{p} of days', peakDay: 'Busiest day', streak: 'Streak', longest: 'Longest {n} days',
+      activeDays: 'Active days', ofDays: '{p} of days', peakDay: 'Peak day', streak: 'Current streak', longest: 'Longest: {n} days',
       longestSession: 'Longest session', allTime: 'All time', days: 'd',
-      quotas: 'Plan limits', resetsIn: 'Resets in {t}', reset: 'Reset', left: '{p} left', window5h: '5-hour', window7d: 'Weekly',
-      daily: 'Daily usage', avg7: '7-day average', total: 'Total', noActivity: 'No activity', none: 'No usage in this period',
-      calendar: 'Calendar', activeCount: '{n} active days', hidden: '{n} earlier day(s) not shown', less: 'Less', more: 'More', hoverDay: 'Hover or tap a day',
-      rhythm: 'Weekly rhythm', peak: 'Peak {h}', messages: '{n} messages', hoverSlot: '{n} messages in total · hover or tap a slot',
+      quotas: 'Usage limits', resetsIn: 'Resets in {t}', reset: 'Reset', left: '{p} remaining', window5h: '5-hour', window7d: 'Weekly',
+      daily: 'Daily usage', avg7: '7-day moving average', total: 'Total', noActivity: 'No activity', none: 'No data for this period',
+      calendar: 'Activity heatmap', activeCount: '{n} active days', hidden: '{n} earlier day(s) not shown', less: 'Less', more: 'More', hoverDay: 'Hover or tap a day',
+      rhythm: 'Activity by hour', peak: 'Peak hour {h}', messages: '{n} messages', hoverSlot: '{n} messages in total · hover or tap a slot',
       breakdown: 'Models', modelsCount: '{n} models', model: 'Model', share: 'Share', input: 'Input', output: 'Output', cacheRead: 'Cache read', cacheWrite: 'Cache write',
-      about: 'About this data', other: 'Other models',
-      aboutSrc: 'Sources', aboutCost: 'Cost', aboutTime: 'Time',
+      about: 'Methodology', other: 'Other models',
+      aboutSrc: 'Data sources', aboutCost: 'Billing basis', aboutTime: 'Time zone',
       about1: 'A local collector reads each tool\'s logs; for Claude Code that is <code>~/.claude/projects</code>. Tokens include subagents and every reply counts once, so totals can differ from <code>/stats</code>.',
       about2: '{est} is estimated from per-token prices, {actual} comes from the provider\'s bill. Models without a price are left out of the cost total.',
       about3: 'Days and hours follow {tz}. Last updated {t}.',
       noPrice: 'No price for this model', unpriced: '{n} model(s) without a price are not counted',
-      updated: 'Updated {t}', stale: 'Data is {n} days old',
+      updated: 'Updated {t}', stale: 'Last updated {n} days ago',
       wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], wdShort: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+      ariaSrc: 'Source', ariaRange: 'Time range', ariaMetric: 'Metric',
     },
     zh: {
-      allSources: '全部来源', all: '全部', d30: '30 天', d7: '7 天', lang: 'EN', themeSystem: '自动', themeLight: '浅色', themeDark: '深色',
-      demoNotice: '当前显示的是虚构的演示数据。运行采集脚本后即可看到你自己的用量。',
+      allSources: '全部来源', all: '全部', d30: '30 天', d7: '7 天', lang: 'EN', themeSystem: '跟随系统', themeLight: '浅色', themeDark: '深色',
+      demoNotice: '当前显示示例数据。运行采集脚本后显示你的实际用量。',
       pricesNotice: '模型单价是占位值，尚未核实，估算费用仅供参考。',
-      cost: '费用', tokens: 'Token', spend: '估算花费', tokUsed: 'Token 用量',
-      bySource: '按来源', byModel: '按模型', vsPrev: '较前 {n} 天', perDay: '日均 {v}',
-      est: 'est', actual: 'actual', mixed: 'est + actual',
-      sessions: '会话', perActive: '每活跃日 {v} 个', requests: 'API 请求', billingOnly: '仅账单类来源',
-      activeDays: '活跃天数', ofDays: '占 {p}', peakDay: '最高的一天', streak: '连续使用', longest: '最长 {n} 天',
-      longestSession: '最长会话', allTime: '全部', days: '天',
-      quotas: '套餐额度', resetsIn: '{t}后重置', reset: '已重置', left: '剩余 {p}', window5h: '5 小时', window7d: '每周',
-      daily: '每日用量', avg7: '7 日均值', total: '合计', noActivity: '无活动', none: '这段时间没有用量',
-      calendar: '日历', activeCount: '{n} 个活跃日', hidden: '更早的 {n} 天未显示', less: '少', more: '多', hoverDay: '悬停或点按查看某天',
-      rhythm: '每周节律', peak: '高峰 {h}', messages: '{n} 条消息', hoverSlot: '共 {n} 条消息，悬停或点按查看某个时段',
+      cost: '费用', tokens: 'Token', spend: '预估费用', tokUsed: 'Token 用量',
+      bySource: '按来源', byModel: '按模型', vsPrev: '环比前 {n} 天', perDay: '日均 {v}',
+      est: '预估', actual: '实际', mixed: '预估 + 实际',
+      sessions: '会话', perActive: '每活跃日 {v} 个', requests: 'API 请求', billingOnly: '仅计费类来源',
+      activeDays: '活跃天数', ofDays: '占比 {p}', peakDay: '峰值日', streak: '当前连续活跃', longest: '最长连续 {n} 天',
+      longestSession: '最长会话', allTime: '全部时间', days: '天',
+      quotas: '用量限额', resetsIn: '{t}后重置', reset: '已重置', left: '剩余 {p}', window5h: '5 小时', window7d: '每周',
+      daily: '每日用量', avg7: '7 日移动平均', total: '合计', noActivity: '无活动', none: '所选时段内无数据',
+      calendar: '活动热力图', activeCount: '{n} 个活跃日', hidden: '更早的 {n} 天未显示', less: '少', more: '多', hoverDay: '悬停或点按查看单日数据',
+      rhythm: '时段分布', peak: '峰值时段 {h}', messages: '{n} 条消息', hoverSlot: '共 {n} 条消息，悬停或点按查看某个时段',
       breakdown: '模型明细', modelsCount: '{n} 个模型', model: '模型', share: '占比', input: '输入', output: '输出', cacheRead: '缓存读取', cacheWrite: '缓存写入',
-      about: '关于这些数据', other: '其他模型',
-      aboutSrc: '数据来源', aboutCost: '费用', aboutTime: '时间',
+      about: '数据说明', other: '其他模型',
+      aboutSrc: '数据来源', aboutCost: '计费口径', aboutTime: '时区',
       about1: '本机采集脚本读取各工具的会话记录，Claude Code 读的是 <code>~/.claude/projects</code>。token 含子代理，每条回复只计一次，所以总数可能和 <code>/stats</code> 不同。',
       about2: '{est} 按单价估算，{actual} 来自平台账单。没有单价的模型不计入费用，费用栏留空。',
       about3: '日期和钟点按 {tz} 划分，最近一次更新在 {t}。',
       noPrice: '没有这个模型的单价', unpriced: '{n} 个模型没有单价，未计入',
-      updated: '更新于 {t}', stale: '数据已过期 {n} 天',
+      updated: '更新于 {t}', stale: '数据已 {n} 天未更新',
       wd: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'], wdShort: ['一', '二', '三', '四', '五', '六', '日'],
+      ariaSrc: '来源', ariaRange: '时间范围', ariaMetric: '指标',
     },
   };
   let lang = store.get('lang') || ((navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en');
@@ -412,10 +414,20 @@ footer a:hover{color:var(--text);text-decoration:underline}
   const axisDate = (d) => d.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', {month: 'numeric', day: 'numeric', timeZone: 'UTC'});
 
   /* ---------- names & colors ---------- */
+  const REST = '__rest', MAX_SERIES = 6;
   const PALETTE = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s4)', 'var(--s5)', 'var(--s6)', 'var(--s7)'];
   const KNOWN = {'claude-opus-5-5': 'Opus 5.5', 'claude-opus-5': 'Opus 5', 'claude-sonnet-5-5': 'Sonnet 5.5', 'claude-haiku-5-5': 'Haiku 5.5',
     'claude-fable-5-1': 'Fable 5.1', 'claude-fable-5': 'Fable 5', 'example-model-a': 'Example A', 'example-model-b': 'Example B'};
-  const modelName = (m) => m === 'other' ? t('other') : KNOWN[m] || m.replace(/^claude-/, '');
+  const WORDS = {deepseek: 'DeepSeek', gpt: 'GPT', glm: 'GLM', qwen: 'Qwen', kimi: 'Kimi', gemini: 'Gemini', mini: 'mini'};
+  // Unknown ids still read well: claude-haiku-4-5-20251001 -> Haiku 4.5, deepseek-v4-pro -> DeepSeek V4 Pro.
+  function modelName(m) {
+    if (m === 'other' || m === REST) return t('other');
+    if (KNOWN[m]) return KNOWN[m];
+    const id = m.replace(/^claude-/, '').replace(/-\d{8}$/, '');
+    const fam = id.match(/^(opus|sonnet|haiku|fable)-(\d+)(?:-(\d+))?$/);
+    if (fam) return fam[1][0].toUpperCase() + fam[1].slice(1) + ' ' + fam[2] + (fam[3] ? '.' + fam[3] : '');
+    return id.split('-').map(w => WORDS[w] || (/^v?\d/.test(w) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1))).join(' ');
+  }
 
   let data = null, srcColor = {}, modelColor = {};
   const state = {src: store.get('src') || 'all', range: store.get('range') || 'all', metric: store.get('metric') || 'cost'};
@@ -433,7 +445,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
   const bySource = () => state.src === 'all' && data.sources.length > 1;
   const gKey = (r) => bySource() ? r.src : r.model;
   const gName = (g) => bySource() ? srcName(g) : modelName(g);
-  const gColor = (g) => bySource() ? srcColor[g] : modelColor[g] || 'var(--s7)';
+  const gColor = (g) => g === REST ? 'var(--s7)' : bySource() ? srcColor[g] : modelColor[g] || 'var(--s7)';
   const today = () => D(data.generated.slice(0, 10));
 
   function view() {
@@ -451,7 +463,13 @@ footer a:hover{color:var(--text);text-decoration:underline}
     const groups = {}, byDay = new Map();
     inR.forEach(r => { const g = gKey(r), v = val(r); groups[g] = (groups[g] || 0) + v;
       const m = byDay.get(r.d) || byDay.set(r.d, {}).get(r.d); m[g] = (m[g] || 0) + v; });
-    const order = Object.keys(groups).sort((a, b) => groups[b] - groups[a]);
+    let order = Object.keys(groups).filter(g => groups[g] > 0).sort((a, b) => groups[b] - groups[a]);
+    if (order.length > MAX_SERIES) {
+      const tail = new Set(order.slice(MAX_SERIES - 1));
+      groups[REST] = 0; tail.forEach(g => { groups[REST] += groups[g]; delete groups[g]; });
+      byDay.forEach(m => { let x = 0; tail.forEach(g => { if (m[g]) { x += m[g]; delete m[g]; } }); if (x) m[REST] = x; });
+      order = order.slice(0, MAX_SERIES - 1).concat(REST);
+    }
     const total = inR.reduce((s, r) => s + val(r), 0);
     const nAct = inR.filter(r => r.cost != null).length;
     const kind = state.metric !== 'cost' ? '' : nAct === inR.length ? t('actual') : nAct ? t('mixed') : t('est');
@@ -488,7 +506,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
     $('m-cost').textContent = t('cost'); $('m-tok').textContent = t('tokens');
     $('langBtn').textContent = t('lang'); $('langBtn').setAttribute('aria-label', lang === 'zh' ? 'Switch to English' : '切换到中文');
     $('themeBtn').innerHTML = THEME_ICON[theme] + '<span>' + t(theme === 'system' ? 'themeSystem' : theme === 'light' ? 'themeLight' : 'themeDark') + '</span>';
-    $('srcSeg').setAttribute('aria-label', 'Source'); $('rngSeg').setAttribute('aria-label', 'Range'); $('metricSeg').setAttribute('aria-label', 'Metric');
+    $('srcSeg').setAttribute('aria-label', t('ariaSrc')); $('rngSeg').setAttribute('aria-label', t('ariaRange')); $('metricSeg').setAttribute('aria-label', t('ariaMetric'));
     $('quotaTitle').textContent = t('quotas'); $('dailyTitle').textContent = t('daily'); $('calTitle').textContent = t('calendar');
     $('punchTitle').textContent = t('rhythm'); $('tblTitle').textContent = t('breakdown'); $('aboutTitle').textContent = t('about');
     const ramp = $('ramp'); ramp.replaceChildren(t('less')); for (let i = 0; i < 5; i++) { const x = E('i'); x.style.background = `var(--h${i})`; ramp.appendChild(x); } ramp.append(t('more'));
@@ -641,7 +659,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
     const every = Math.max(1, Math.round(days.length / (narrow ? 4 : 8)));
     days.forEach((d, i) => { if (i % every === 0) { const tx = S('text', {x: X(i), y: H - 6, 'text-anchor': 'middle'}, svg); tx.textContent = axisDate(d); } });
     const hl = S('rect', {y: m.t - 6, height: H - m.t - m.b + 6, width: bw, rx: 6, fill: 'var(--text)', 'fill-opacity': .05, visibility: 'hidden'}, svg);
-    const cols = S('g', {}, svg);
+    const cols = S('g', {}, svg), capped = [];
     const r = Math.min(4, barW / 2);
     days.forEach((d, i) => {
       const mrec = v.byDay.get(K(d)); if (!mrec) return;
@@ -652,9 +670,16 @@ footer a:hover{color:var(--text);text-decoration:underline}
         const isTop = j === keys.length - 1, rr = isTop ? Math.min(r, h) : 0, x0 = X(i) - barW / 2;
         S('path', {d: `M${x0},${y0}V${y1 + rr}Q${x0},${y1} ${x0 + rr},${y1}H${x0 + barW - rr}Q${x0 + barW},${y1} ${x0 + barW},${y1 + rr}V${y0}Z`, fill: gColor(k)}, g);
       });
-      if (tot[i] > top) {
-        const tx = S('text', {x: X(i), y: m.t - 8, 'text-anchor': 'middle', style: 'fill:var(--text-2);font-weight:500'}, svg); tx.textContent = fmt(tot[i]) + ' ↑';
-      }
+      if (tot[i] > top) capped.push(i);
+    });
+    // Several capped days can sit side by side; label the tallest first and drop labels that would overlap.
+    const placed = [];
+    capped.sort((a, b) => tot[b] - tot[a]).forEach(i => {
+      const label = fmt(tot[i]) + ' ↑', w = label.length * 6.6 + 4;
+      let x = Math.min(W - m.r - w / 2, Math.max(m.l + w / 2, X(i)));
+      if (placed.some(p => Math.abs(p.x - x) < (p.w + w) / 2 + 6)) return;
+      placed.push({x, w});
+      const tx = S('text', {x, y: m.t - 8, 'text-anchor': 'middle', style: 'fill:var(--text-2);font-weight:500'}, svg); tx.textContent = label;
     });
     let pd = ''; avg.forEach((a, i) => pd += (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(a).toFixed(1));
     S('path', {d: pd, fill: 'none', stroke: 'var(--text-2)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3', 'stroke-linejoin': 'round'}, svg);
@@ -764,7 +789,8 @@ footer a:hover{color:var(--text);text-decoration:underline}
     thead.appendChild(hr); tb.appendChild(thead);
     const body = E('tbody'), max = list[0].v || 1;
     const nameCell = (o) => { const w = E('div', 'nm'), d = E('i', 'dot'), l = E('div', null, modelName(o.model)); d.style.background = color(o); if (data.sources.length > 1) l.appendChild(E('small', null, srcName(o.src))); w.append(d, l); return w; };
-    const barEl = (o) => { const b = E('div', 'bar'), tr = E('div', 'tr'), f = E('span'); f.style.width = (o.v / max * 100) + '%'; f.style.background = color(o); tr.appendChild(f); b.append(tr, E('em', null, pct(o.v / (v.total || 1)))); return b; };
+    const barEl = (o) => { if (state.metric === 'cost' && !o.priced) { const b = E('div', 'bar'); b.append(E('div', 'tr'), E('em', null, '—')); return b; }
+      const b = E('div', 'bar'), tr = E('div', 'tr'), f = E('span'); f.style.width = (o.v / max * 100) + '%'; f.style.background = color(o); tr.appendChild(f); b.append(tr, E('em', null, pct(o.v / (v.total || 1)))); return b; };
     const costEl = (o, tag) => { if (!o.priced) { const s = E(tag, 'cost muted', '—'); s.title = t('noPrice'); return s; }
       const s = E(tag, 'cost', money(o.cost)); if (o.est) s.appendChild(E('span', 'tag', t('est'))); return s; };
     list.forEach(o => {
@@ -783,7 +809,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
   function render() {
     if (state.src !== 'all' && !data.sources.some(s => s.id === state.src)) state.src = 'all';
     const mt = {}; data.rows.forEach(r => { if (state.src === 'all' || r.src === state.src) mt[r.model] = (mt[r.model] || 0) + rowTok(r); });
-    modelColor = {}; Object.keys(mt).sort((a, b) => mt[b] - mt[a]).forEach((m, i) => modelColor[m] = PALETTE[i % PALETTE.length]);
+    modelColor = {}; Object.keys(mt).sort((a, b) => mt[b] - mt[a]).forEach((m, i) => modelColor[m] = i < MAX_SERIES - 1 ? PALETTE[i] : 'var(--s7)');
     renderChrome();
     const v = view();
     renderHero(v); renderStats(v); renderQuotas(); renderDaily(v); renderCalendar(v); renderPunch(); renderTable(v);

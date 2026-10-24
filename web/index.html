@@ -347,7 +347,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
       ma_day: '7-day moving average', ma_week: '4-week moving average', ma_month: '3-month moving average',
       r_1m: '1M', r_3m: '3M', r_6m: '6M', r_ytd: 'YTD', r_1y: '1Y', r_all: 'All', navigator: 'Time range navigator',
       total: 'Total', noActivity: 'No activity', none: 'No data for this period',
-      calendar: 'Activity heatmap', activeCount: '{n} active days', hidden: '{n} earlier day(s) not shown', less: 'Less', more: 'More', hoverDay: 'Hover or tap a day',
+      calendar: 'Activity heatmap', activeCount: '{n} active days', sessionsN: '{n} sessions', less: 'Less', more: 'More', hoverDay: 'Hover or tap a day',
       rhythm: 'Activity by hour', peak: 'Peak hour {h}', messages: '{n} messages', hoverSlot: '{n} messages in total · hover or tap a slot',
       breakdown: 'Models', modelsCount: '{n} models', model: 'Model', share: 'Share', input: 'Input', output: 'Output', cacheRead: 'Cache read', cacheWrite: 'Cache write',
       about: 'Methodology', other: 'Other models',
@@ -376,7 +376,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
       ma_day: '7 日移动平均', ma_week: '4 周移动平均', ma_month: '3 个月移动平均',
       r_1m: '近 1 月', r_3m: '近 3 月', r_6m: '近 6 月', r_ytd: '今年', r_1y: '近 1 年', r_all: '全部', navigator: '时间范围导航',
       total: '合计', noActivity: '无活动', none: '所选时段内无数据',
-      calendar: '活动热力图', activeCount: '{n} 个活跃日', hidden: '更早的 {n} 天未显示', less: '少', more: '多', hoverDay: '悬停或点按查看单日数据',
+      calendar: '活动热力图', activeCount: '{n} 个活跃日', sessionsN: '{n} 个会话', less: '少', more: '多', hoverDay: '悬停或点按查看单日数据',
       rhythm: '时段分布', peak: '峰值时段 {h}', messages: '{n} 条消息', hoverSlot: '共 {n} 条消息，悬停或点按查看某个时段',
       breakdown: '模型明细', modelsCount: '{n} 个模型', model: '模型', share: '占比', input: '输入', output: '输出', cacheRead: '缓存读取', cacheWrite: '缓存写入',
       about: '数据说明', other: '其他模型',
@@ -414,7 +414,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
     if (!full && n >= 1e4) return new Intl.NumberFormat('en-US', {...base, notation: 'compact', maximumFractionDigits: 1}).format(n);
     return new Intl.NumberFormat('en-US', {...base, maximumFractionDigits: n >= 100 || full ? 0 : 2}).format(n); };
   const int = (n) => Math.round(n).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US');
-  const pct = (x) => x >= .995 ? '100%' : x >= .1 ? (x * 100).toFixed(1) + '%' : x >= .001 ? (x * 100).toFixed(2) + '%' : '<0.1%';
+  const pct = (x) => !x ? '0%' : x >= .995 ? '100%' : x >= .1 ? (x * 100).toFixed(1) + '%' : x >= .001 ? (x * 100).toFixed(2) + '%' : '<0.1%';
   const D = (s) => new Date(s + 'T00:00:00Z');
   const K = (d) => d.toISOString().slice(0, 10);
   const add = (d, n) => new Date(d.getTime() + n * 864e5);
@@ -482,8 +482,6 @@ footer a:hover{color:var(--text);text-decoration:underline}
     const start = rows.length ? D(rows.reduce((m, r) => r.d < m ? r.d : m, rows[0].d)) : last;
     return {rows, inR: rows, start, last, ...summarize(rows, val)};
   }
-  // All-time charts start at the first busy stretch, so one stray early day doesn't flatten months of axis.
-  function denseStart(keys) { const ks = keys.slice().sort(); return ks.find((d, i) => i + 4 < ks.length && diff(D(d), D(ks[i + 4])) < 14) || ks[0]; }
   const dayTotal = (m) => m ? Object.values(m).reduce((a, b) => a + b, 0) : 0;
 
   /* ---------- tooltip ---------- */
@@ -552,7 +550,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
     meta.appendChild(E('span', null, span2(v.start, v.last)));
 
     const box = $('spark'); box.replaceChildren();
-    const s0 = v.byDay.size ? D(denseStart([...v.byDay.keys()])) : v.start;
+    const s0 = v.start;
     const days = []; for (let d = s0; d <= v.last; d = add(d, 1)) days.push(d);
     const ys = days.map(d => dayTotal(v.byDay.get(K(d))));
     const sm = ys.map((_, i) => { const w = ys.slice(Math.max(0, i - 2), i + 3); return w.reduce((a, b) => a + b, 0) / w.length; });
@@ -580,7 +578,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
 
   /* ---------- stats ---------- */
   function streaks(rows) {
-    const ds = [...new Set(rows.filter(r => rowTok(r) > 0 || r.cost > 0).map(r => r.d))].sort().map(D);
+    const ds = [...new Set(rows.filter(r => rowTok(r) > 0 || r.cost > 0 || r.sessions || r.messages).map(r => r.d))].sort().map(D);
     let best = 0, run = 0, p = null;
     ds.forEach(d => { run = p && diff(p, d) === 1 ? run + 1 : 1; best = Math.max(best, run); p = d; });
     return {best, current: p && diff(p, today()) <= 1 ? run : 0};
@@ -648,7 +646,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
   const PRESETS = [['1m', 1], ['3m', 3], ['6m', 6], ['ytd', 0], ['1y', 12], ['all', null]];
   const MA_SPAN = {day: 7, week: 4, month: 3}, MIN_DAYS = 7;
   // The usage chart works like a stock chart: the window is a range of day indexes [a, b] from the first
-  // day with usage, moved by the presets and the navigator underneath.
+  // active day, moved by the presets and the navigator underneath.
   const ch = {win: null, preset: 'all', n: 0};
 
   function presetWindow(p, d0, last) {
@@ -683,9 +681,9 @@ footer a:hover{color:var(--text);text-decoration:underline}
   function renderDaily(v) {
     const box = $('daily'), nav = $('nav'), read = $('readout');
     box.replaceChildren(); nav.replaceChildren(); read.replaceChildren();
-    const keys = [...v.byDay.keys()].filter(d => dayTotal(v.byDay.get(d)) > 0).sort();
+    const keys = [...v.byDay.keys()].sort();
     const rs = $('rangeSeg'); rs.replaceChildren(); rs.setAttribute('aria-label', t('ariaRange'));
-    if (!keys.length) { $('dailyTitle').textContent = t('daily'); box.appendChild(E('div', 'empty', t('none'))); return; }
+    if (!keys.length || !v.total) { $('dailyTitle').textContent = t('daily'); box.appendChild(E('div', 'empty', t('none'))); return; }
     const d0 = D(keys[0]), last = v.last, n = diff(d0, last) + 1;
     if (!ch.win || ch.n !== n) { ch.n = n; ch.win = presetWindow(ch.preset || 'all', d0, last); }
 
@@ -841,11 +839,12 @@ footer a:hover{color:var(--text);text-decoration:underline}
     const tot = new Map(); v.byDay.forEach((m, d) => tot.set(d, dayTotal(m)));
     const keys = [...tot.keys()].sort();
     if (!keys.length) { box.appendChild(E('div', 'empty', t('none'))); $('calSub').textContent = ''; $('calRead').textContent = ''; return; }
-    const ds = denseStart(keys), skipped = keys.filter(k => k < ds).length;
-    $('calSub').textContent = t('activeCount', {n: keys.length}) + (skipped ? ' · ' + t('hidden', {n: skipped}) : '');
+    const act = {}; v.rows.forEach(r => { const a = act[r.d] || (act[r.d] = {s: 0, m: 0}); a.s += r.sessions || 0; a.m += r.messages || 0; });
+    const ds = keys[0];
+    $('calSub').textContent = t('activeCount', {n: keys.length});
     $('calRead').textContent = t('hoverDay');
-    const vals = [...tot.values()].sort((a, b) => a - b), q = (p) => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))];
-    const cuts = [q(.25), q(.5), q(.75)], lvl = (x) => !x ? 0 : x <= cuts[0] ? 1 : x <= cuts[1] ? 2 : x <= cuts[2] ? 3 : 4;
+    const vals = [...tot.values()].filter(x => x > 0).sort((a, b) => a - b), q = (p) => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))];
+    const cuts = [q(.25), q(.5), q(.75)], lvl = (x, d) => !x ? (tot.has(d) ? 1 : 0) : x <= cuts[0] ? 1 : x <= cuts[1] ? 2 : x <= cuts[2] ? 3 : 4;
     const first = new Date(Date.UTC(D(ds).getUTCFullYear(), D(ds).getUTCMonth(), 1)), last = v.last;
     const months = []; for (let mo = first; mo <= last; mo = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 1))) months.push(mo);
     const weeksOf = (mo) => { const e = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 0)); return Math.ceil((((mo.getUTCDay() + 6) % 7) + e.getUTCDate()) / 7); };
@@ -865,12 +864,14 @@ footer a:hover{color:var(--text);text-decoration:underline}
         const d = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth(), dd)), pos = off + dd - 1;
         const x = Math.floor(pos / 7) * (cell + gap), y = (pos % 7) * (cell + gap), val_ = tot.get(K(d)) || 0; sum += val_;
         const future = d > last;
-        const rc = S('rect', {x, y, width: cell, height: cell, rx: Math.min(4, cell / 3.5), fill: future ? 'none' : `var(--h${lvl(val_)})`,
+        const rc = S('rect', {x, y, width: cell, height: cell, rx: Math.min(4, cell / 3.5), fill: future ? 'none' : `var(--h${lvl(val_, K(d))})`,
           stroke: future ? 'var(--border)' : 'none', 'stroke-dasharray': future ? '2 2' : ''}, svg);
         if (!future) {
+          const a = act[K(d)], parts = !tot.has(K(d)) ? [t('noActivity')] : [fmt(val_) + ' tokens'];
+          if (a && a.s) parts.push(t('sessionsN', {n: a.s})); if (a && a.m) parts.push(t('messages', {n: int(a.m)}));
           const show = () => { const br = box.getBoundingClientRect(), r2 = rc.getBoundingClientRect();
-            tip.show(r2.left - br.left + r2.width / 2, r2.top - br.top, dateFmt(d, true), [[val_ ? fmt(val_) : t('noActivity'), '']]);
-            $('calRead').textContent = dateFmt(d, true) + ' · ' + (val_ ? fmt(val_) : t('noActivity')); };
+            tip.show(r2.left - br.left + r2.width / 2, r2.top - br.top, dateY(d, true), parts.map(x => [x, '']));
+            $('calRead').textContent = dateY(d, true) + ' · ' + parts.join(' · '); };
           rc.addEventListener('pointerenter', show); rc.addEventListener('pointerdown', show); rc.addEventListener('pointerleave', tip.hide);
         }
       }

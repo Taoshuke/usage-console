@@ -1,0 +1,785 @@
+<title>tokenboard</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a calm single column. Top bar (sources, range, theme, language), then the headline number with
+   its sparkline and breakdown, a stat row, plan quotas, the daily chart, calendar + weekly rhythm,
+   and the model table. Surfaces are quiet; colour is reserved for data. */
+:root{
+  --bg:#F6F7F9; --surface:#FFFFFF; --sunken:#F0F2F5; --border:#E4E7EC; --border-soft:#EEF0F3;
+  --text:#0F1218; --text-2:#4D5562; --text-3:#858D9A;
+  --accent:#4F46E5; --accent-soft:#EEF0FE; --accent-text:#3F38C9;
+  --s1:#6366F1; --s2:#14A38B; --s3:#E0912F; --s4:#E0577A; --s5:#8B5CF6; --s6:#0EA5E9; --s7:#9AA1AD;
+  --h0:#EEF0F4; --h1:#D9DCFB; --h2:#B0B6F6; --h3:#7D84EE; --h4:#4F46E5;
+  --up:#C2410C; --down:#0F8A5F; --warn:#B45309; --crit:#C62D4A;
+  --shadow:0 1px 2px rgba(15,18,24,.04),0 2px 8px rgba(15,18,24,.04);
+  --tip-bg:#FFFFFF; --tip-border:#E4E7EC;
+  --sans:"Geist","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  /* Mono faces carry no CJK glyphs; name sans CJK fallbacks so Chinese never drops to a serif face such as SimSun. */
+  --mono:"Geist Mono",ui-monospace,"SF Mono","Cascadia Mono",Consolas,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",monospace;
+  --r-lg:16px; --r-md:10px; --r-sm:7px;
+  --gl:max(20px,env(safe-area-inset-left,0px)); --gr:max(20px,env(safe-area-inset-right,0px));
+}
+@media (max-width:560px){:root{--gl:max(16px,env(safe-area-inset-left,0px)); --gr:max(16px,env(safe-area-inset-right,0px))}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C0E12; --surface:#14171D; --sunken:#1A1E26; --border:#252A34; --border-soft:#1E222B;
+  --text:#ECEEF2; --text-2:#A8B0BD; --text-3:#6F7887;
+  --accent:#8B8CF8; --accent-soft:#22244A; --accent-text:#AEB0FB;
+  --s1:#8B8CF8; --s2:#2FC4A6; --s3:#F0AB52; --s4:#F07A98; --s5:#A98BFA; --s6:#45B9F0; --s7:#6F7887;
+  --h0:#1A1E26; --h1:#262A52; --h2:#3A3F86; --h3:#5D62CF; --h4:#9798FA;
+  --up:#F59E6B; --down:#3FCF9A; --warn:#F0AB52; --crit:#F07A98;
+  --shadow:0 0 0 1px rgba(255,255,255,.02);
+  --tip-bg:#1A1E26; --tip-border:#2C3240; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C0E12; --surface:#14171D; --sunken:#1A1E26; --border:#252A34; --border-soft:#1E222B;
+  --text:#ECEEF2; --text-2:#A8B0BD; --text-3:#6F7887;
+  --accent:#8B8CF8; --accent-soft:#22244A; --accent-text:#AEB0FB;
+  --s1:#8B8CF8; --s2:#2FC4A6; --s3:#F0AB52; --s4:#F07A98; --s5:#A98BFA; --s6:#45B9F0; --s7:#6F7887;
+  --h0:#1A1E26; --h1:#262A52; --h2:#3A3F86; --h3:#5D62CF; --h4:#9798FA;
+  --up:#F59E6B; --down:#3FCF9A; --warn:#F0AB52; --crit:#F07A98;
+  --shadow:0 0 0 1px rgba(255,255,255,.02);
+  --tip-bg:#1A1E26; --tip-border:#2C3240; color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
+
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased;
+  font-feature-settings:"tnum" 1,"cv11" 1;
+  padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));padding-block:0 56px}
+@media (max-width:560px){body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.mono{font-family:var(--mono)}
+svg text{fill:var(--text-3);font:11px var(--mono)}
+
+/* Top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;margin-left:calc(-1 * var(--gl));margin-right:calc(-1 * var(--gr));
+  padding-left:var(--gl);padding-right:var(--gr);background:color-mix(in srgb,var(--bg) 82%,transparent);
+  -webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid transparent;transition:border-color .2s}
+.top.stuck{border-bottom-color:var(--border)}
+.top-in{max-width:1180px;margin:0 auto;min-height:60px;display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;padding-block:10px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.01em;font-size:15px;margin-right:6px;white-space:nowrap}
+.brand svg{flex:none}
+.seg{min-width:0;display:inline-flex;padding:3px;gap:2px;border-radius:var(--r-md);background:var(--sunken);border:1px solid var(--border-soft);max-width:100%;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{appearance:none;border:0;background:none;cursor:pointer;padding:6px 11px;border-radius:var(--r-sm);font-size:13px;font-weight:500;color:var(--text-2);white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+.seg button:hover{color:var(--text)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(15,18,24,.08),0 0 0 1px var(--border-soft)}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.tools{margin-left:auto;display:flex;gap:6px;align-items:center}
+.icon-btn{appearance:none;border:1px solid var(--border);background:var(--surface);height:34px;min-width:34px;padding:0 9px;border-radius:var(--r-md);cursor:pointer;color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:500}
+.icon-btn:hover{color:var(--text);border-color:var(--text-3)}
+@media (max-width:760px){
+  .top-in{gap:8px}
+  .brand{flex:1}
+  .seg.src{order:3;flex:1 1 100%}
+  .seg.rng{order:4}
+}
+
+/* Notice */
+.notice{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 14px;border-radius:var(--r-md);background:var(--accent-soft);color:var(--accent-text);font-size:13px}
+.notice p{margin:0;flex:1;min-width:0}
+.notice button{appearance:none;border:0;background:none;color:inherit;cursor:pointer;padding:4px;border-radius:6px;display:inline-flex;opacity:.75}
+.notice button:hover{opacity:1}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow);min-width:0}
+.card-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;padding:18px 22px 0}
+.card-h h2{margin:0;font-size:14px;font-weight:600;letter-spacing:-.005em}
+.card-h .sub{color:var(--text-3);font-size:12.5px}
+.card-b{padding:14px 22px 20px}
+@media (max-width:560px){.card-h{padding:16px 16px 0}.card-b{padding:12px 16px 16px}}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+.hero-main{padding:24px 26px 18px;display:flex;flex-direction:column;min-width:0}
+.hero-side{padding:24px 26px;border-left:1px solid var(--border-soft);min-width:0;display:flex;flex-direction:column;gap:14px}
+@media (max-width:880px){.hero{grid-template-columns:minmax(0,1fr)}.hero-side{border-left:0;border-top:1px solid var(--border-soft)}}
+@media (max-width:560px){.hero-main,.hero-side{padding:18px 16px}}
+.hero-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.eyebrow{font-size:12.5px;font-weight:500;color:var(--text-3)}
+.mini-seg{display:inline-flex;gap:2px;padding:2px;border-radius:8px;background:var(--sunken)}
+.mini-seg button{appearance:none;border:0;background:none;cursor:pointer;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;color:var(--text-2)}
+.mini-seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(15,18,24,.08)}
+.big{font-size:clamp(44px,7.4vw,76px);line-height:1;font-weight:600;letter-spacing:-.045em;margin-top:14px;white-space:nowrap}
+.big .unit{font-size:.36em;letter-spacing:-.01em;color:var(--text-3);font-weight:500;margin-left:.3em}
+.hero-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:12px;font-size:13px;color:var(--text-2)}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;background:var(--sunken);color:var(--text-2)}
+.pill.up{color:var(--up);background:color-mix(in srgb,var(--up) 12%,transparent)}
+.pill.down{color:var(--down);background:color-mix(in srgb,var(--down) 12%,transparent)}
+.pill.est{font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:.02em}
+.spark{margin-top:auto;padding-top:18px}
+.spark svg{display:block;width:100%;height:84px}
+.stack{display:flex;height:10px;border-radius:999px;overflow:hidden;gap:2px;background:var(--sunken)}
+.stack span{min-width:3px}
+.legend-list{display:flex;flex-direction:column}
+.li{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--border-soft);font-size:13.5px}
+.li:first-child{border-top:0}
+.li .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.li .v{font-weight:600}
+.li .p{color:var(--text-3);font-size:12.5px;min-width:46px;text-align:right}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(var(--n,6),minmax(0,1fr))}
+.stat{padding:18px 20px;min-width:0;border-left:1px solid var(--border-soft)}
+.stat:first-child{border-left:0}
+.stat .k{font-size:12.5px;color:var(--text-3);font-weight:500;display:flex;gap:6px;align-items:center;white-space:nowrap}
+.stat .k em{font-style:normal;font-size:10.5px;font-weight:600;color:var(--text-3);background:var(--sunken);padding:1px 6px;border-radius:999px}
+.stat .v{font-size:24px;font-weight:600;letter-spacing:-.03em;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .v small{font-size:14px;color:var(--text-3);font-weight:500;letter-spacing:0;margin-left:2px}
+.stat .d{font-size:12.5px;color:var(--text-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:980px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.stat:nth-child(3n+1){border-left:0}.stat:nth-child(n+4){border-top:1px solid var(--border-soft)}}
+@media (max-width:560px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stat{padding:14px 16px}.stat:nth-child(3n+1){border-left:1px solid var(--border-soft)}.stat:nth-child(2n+1){border-left:0}.stat:nth-child(n+3){border-top:1px solid var(--border-soft)}.stat .v{font-size:21px}}
+
+/* Quotas */
+.quotas{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+.q{padding:14px 16px;border-radius:var(--r-md);background:var(--sunken)}
+.q-top{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.q-top b{font-weight:600}
+.q-top span{color:var(--text-3)}
+.q-val{font-size:20px;font-weight:600;letter-spacing:-.02em;margin-top:4px}
+.track{height:6px;border-radius:999px;background:color-mix(in srgb,var(--text-3) 18%,transparent);margin-top:8px;overflow:hidden}
+.track span{display:block;height:100%;border-radius:999px}
+.q-bot{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px;color:var(--text-3)}
+
+/* Charts */
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--text-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .ma{width:14px;height:0;border-top:2px dashed var(--text-2)}
+.chart{position:relative;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:absolute;z-index:4;pointer-events:none;min-width:180px;padding:10px 12px;border-radius:var(--r-md);background:var(--tip-bg);
+  border:1px solid var(--tip-border);box-shadow:0 10px 30px rgba(15,18,24,.14);font-size:12.5px;line-height:1.6}
+.tip .t{font-weight:600;margin-bottom:4px}
+.tip .r{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.tip .r span:first-child{display:inline-flex;align-items:center;gap:7px;color:var(--text-2)}
+.tip .r b{font-weight:600}
+.tip .sep{border-top:1px solid var(--border-soft);margin:5px 0}
+
+.duo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media (max-width:900px){.duo{grid-template-columns:minmax(0,1fr)}}
+.months{display:flex;flex-wrap:wrap;gap:16px 18px}
+.month{display:flex;flex-direction:column;gap:7px}
+.month .ml{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--text-3);white-space:nowrap}
+.month .ml b{color:var(--text-2);font-weight:600}
+.month svg{display:block}
+.foot-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-top:14px;font-size:12.5px;color:var(--text-3)}
+.ramp{display:inline-flex;align-items:center;gap:3px}
+.ramp i{width:10px;height:10px;border-radius:3px}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.tbl th{font-size:12px;font-weight:500;color:var(--text-3);text-align:right;padding:0 0 10px 14px;white-space:nowrap}
+.tbl td{padding:12px 0 12px 14px;text-align:right;border-top:1px solid var(--border-soft);white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left;padding-left:0}
+.tbl .nm{display:flex;align-items:center;gap:10px}
+.nm{display:flex;align-items:center;gap:10px;min-width:0}
+.nm small{display:block;color:var(--text-3);font-size:12px}
+.tbl .share{width:24%;text-align:left}
+.bar{display:flex;align-items:center;gap:10px}
+.bar .tr{flex:1;height:6px;border-radius:999px;background:var(--sunken);overflow:hidden}
+.bar .tr span{display:block;height:100%;border-radius:999px}
+.bar em{font-style:normal;color:var(--text-3);font-size:12.5px;min-width:44px;text-align:right}
+.tbl .cost{font-weight:600}
+.tag{font-family:var(--mono);font-size:10.5px;color:var(--text-3);margin-left:5px;font-weight:400}
+.mcards{display:none;flex-direction:column}
+@media (max-width:700px){.tbl{display:none}.mcards{display:flex}}
+.mc{padding:12px 0;border-top:1px solid var(--border-soft);display:flex;flex-direction:column;gap:8px}
+.mc:first-child{border-top:0;padding-top:2px}
+.mc-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mc-parts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;font-size:12px;color:var(--text-3)}
+.mc-parts b{display:block;color:var(--text-2);font-weight:500;font-size:13px}
+
+details.about{font-size:13px;color:var(--text-2)}
+details.about summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:16px 22px;font-weight:500;color:var(--text)}
+details.about summary::-webkit-details-marker{display:none}
+details.about summary svg{transition:transform .2s;color:var(--text-3)}
+details.about[open] summary svg{transform:rotate(90deg)}
+details.about .body{padding:0 22px 18px 44px;line-height:1.75;max-width:80ch}
+details.about .body p{margin:0 0 6px}
+details.about code{font-family:var(--mono);font-size:12px;background:var(--sunken);padding:1px 5px;border-radius:5px}
+footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--text-3);padding:4px 2px}
+footer a{color:var(--text-2);text-decoration:none}
+footer a:hover{color:var(--text);text-decoration:underline}
+.empty{padding:32px 0;text-align:center;color:var(--text-3);font-size:13px}
+
+@media (prefers-reduced-motion:no-preference){
+  .grow{transform-origin:bottom;animation:grow .5s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes grow{from{transform:scaleY(.2);opacity:.2}}
+  .seg button,.mini-seg button,.icon-btn{transition:background .15s,color .15s,border-color .15s}
+}
+</style>
+
+<div class="top" id="top">
+  <div class="top-in">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="6" fill="var(--text)"/><rect x="5.5" y="11" width="2.6" height="5.5" rx="1.3" fill="var(--bg)"/><rect x="9.7" y="7.5" width="2.6" height="9" rx="1.3" fill="var(--bg)"/><rect x="13.9" y="5" width="2.6" height="11.5" rx="1.3" fill="var(--accent)"/></svg>
+      <span id="brandName">tokenboard</span>
+    </div>
+    <div class="seg src" id="srcSeg" role="group"></div>
+    <div class="seg rng" id="rngSeg" role="group">
+      <button type="button" id="r-all" data-r="all"></button>
+      <button type="button" id="r-30" data-r="30"></button>
+      <button type="button" id="r-7" data-r="7"></button>
+    </div>
+    <div class="tools">
+      <button type="button" class="icon-btn" id="langBtn"></button>
+      <button type="button" class="icon-btn" id="themeBtn"></button>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="notice" id="notice" hidden>
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 7v4M8 4.6v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <p id="noticeText"></p>
+    <button type="button" id="noticeClose"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <section class="card hero">
+    <div class="hero-main">
+      <div class="hero-top">
+        <span class="eyebrow" id="heroLabel"></span>
+        <div class="mini-seg" role="group" id="metricSeg">
+          <button type="button" id="m-cost" data-m="cost"></button>
+          <button type="button" id="m-tok" data-m="tok"></button>
+        </div>
+      </div>
+      <div class="big" id="big">—</div>
+      <div class="hero-meta" id="heroMeta"></div>
+      <div class="spark" id="spark"></div>
+    </div>
+    <div class="hero-side">
+      <span class="eyebrow" id="compLabel"></span>
+      <div class="stack" id="stack" aria-hidden="true"></div>
+      <div class="legend-list" id="comp"></div>
+    </div>
+  </section>
+
+  <section class="card stats" id="stats"></section>
+
+  <section class="card" id="quotaCard">
+    <div class="card-h"><h2 id="quotaTitle"></h2><span class="sub" id="quotaSub"></span></div>
+    <div class="card-b"><div class="quotas" id="quotas"></div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2 id="dailyTitle"></h2><div class="legend" id="dailyLegend"></div></div>
+    <div class="card-b"><div class="chart" id="daily"></div></div>
+  </section>
+
+  <div class="duo">
+    <section class="card">
+      <div class="card-h"><h2 id="calTitle"></h2><span class="sub" id="calSub"></span></div>
+      <div class="card-b">
+        <div class="chart months" id="months"></div>
+        <div class="foot-row"><span id="calRead"></span><span class="ramp" id="ramp"></span></div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-h"><h2 id="punchTitle"></h2><span class="sub" id="punchSub"></span></div>
+      <div class="card-b">
+        <div class="chart" id="punch"></div>
+        <div class="foot-row"><span id="punchRead"></span></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-h"><h2 id="tblTitle"></h2><span class="sub" id="tblSub"></span></div>
+    <div class="card-b"><table class="tbl" id="tbl"></table><div class="mcards" id="mcards"></div></div>
+  </section>
+
+  <details class="card about" id="about">
+    <summary><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="aboutTitle"></span></summary>
+    <div class="body" id="aboutBody"></div>
+  </details>
+
+  <footer><span id="footLeft"></span><a href="https://github.com/Taoshuke/tokenboard" target="_blank" rel="noopener">GitHub</a></footer>
+</main>
+
+<script type="application/json" id="demo">__DEMO__</script>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const S = (tag, a, p) => { const n = document.createElementNS(NS, tag); for (const k in a) n.setAttribute(k, a[k]); if (p) p.appendChild(n); return n; };
+  const E = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+  const store = { get(k) { try { return localStorage.getItem('tokenboard:' + k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem('tokenboard:' + k, v); } catch (e) {} } };
+
+  /* ---------- i18n ---------- */
+  const I18N = {
+    en: {
+      allSources: 'All sources', all: 'All', d30: '30D', d7: '7D', lang: '中文', themeSystem: 'Auto', themeLight: 'Light', themeDark: 'Dark',
+      demoNotice: 'You are looking at fictional demo data. Run the collector to see your own usage.',
+      pricesNotice: 'Model prices are placeholders and have not been verified; estimated costs are indicative only.',
+      cost: 'Cost', tokens: 'Tokens', spend: 'Estimated spend', tokUsed: 'Tokens used',
+      bySource: 'By source', byModel: 'By model', vsPrev: 'vs previous {n} days', perDay: '{v} / day',
+      est: 'est', actual: 'actual', mixed: 'est + actual',
+      sessions: 'Sessions', perActive: '{v} per active day', requests: 'API requests', billingOnly: 'Billing sources only',
+      activeDays: 'Active days', ofDays: '{p} of days', peakDay: 'Busiest day', streak: 'Streak', longest: 'Longest {n} days',
+      longestSession: 'Longest session', allTime: 'All time', days: 'd',
+      quotas: 'Plan limits', resetsIn: 'Resets in {t}', reset: 'Reset', left: '{p} left', window5h: '5-hour', window7d: 'Weekly',
+      daily: 'Daily usage', avg7: '7-day average', total: 'Total', noActivity: 'No activity', none: 'No usage in this period',
+      calendar: 'Calendar', activeCount: '{n} active days', hidden: '{n} earlier day(s) not shown', less: 'Less', more: 'More', hoverDay: 'Hover or tap a day',
+      rhythm: 'Weekly rhythm', peak: 'Peak {h}', messages: '{n} messages', hoverSlot: '{n} messages in total · hover or tap a slot',
+      breakdown: 'Models', modelsCount: '{n} models', model: 'Model', share: 'Share', input: 'Input', output: 'Output', cacheRead: 'Cache read', cacheWrite: 'Cache write',
+      about: 'About this data', other: 'Other models',
+      about1: 'Log sources are read by a local collector (for Claude Code, from <code>~/.claude/projects</code>). Tokens include subagents and each reply is counted once, so totals differ from <code>/stats</code>.',
+      about2: 'Costs marked <code>est</code> are estimated from per-token prices; <code>actual</code> amounts come from the provider\'s billing.',
+      about3: 'Days and hours use the {tz} time zone.',
+      updated: 'Updated {t}', stale: 'Data is {n} days old',
+      wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], wdShort: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+    },
+    zh: {
+      allSources: '全部来源', all: '全部', d30: '30 天', d7: '7 天', lang: 'EN', themeSystem: '自动', themeLight: '浅色', themeDark: '深色',
+      demoNotice: '当前显示的是虚构的演示数据。运行采集脚本后即可看到你自己的用量。',
+      pricesNotice: '模型单价是占位值，尚未核实，估算费用仅供参考。',
+      cost: '费用', tokens: 'Token', spend: '估算花费', tokUsed: 'Token 用量',
+      bySource: '按来源', byModel: '按模型', vsPrev: '较前 {n} 天', perDay: '日均 {v}',
+      est: 'est', actual: 'actual', mixed: 'est + actual',
+      sessions: '会话', perActive: '每活跃日 {v} 个', requests: 'API 请求', billingOnly: '仅账单类来源',
+      activeDays: '活跃天数', ofDays: '占 {p}', peakDay: '最高的一天', streak: '连续使用', longest: '最长 {n} 天',
+      longestSession: '最长会话', allTime: '全部', days: '天',
+      quotas: '套餐额度', resetsIn: '{t}后重置', reset: '已重置', left: '剩余 {p}', window5h: '5 小时', window7d: '每周',
+      daily: '每日用量', avg7: '7 日均值', total: '合计', noActivity: '无活动', none: '这段时间没有用量',
+      calendar: '日历', activeCount: '{n} 个活跃日', hidden: '更早的 {n} 天未显示', less: '少', more: '多', hoverDay: '悬停或点按查看某天',
+      rhythm: '每周节律', peak: '高峰 {h}', messages: '{n} 条消息', hoverSlot: '共 {n} 条消息，悬停或点按查看某个时段',
+      breakdown: '模型明细', modelsCount: '{n} 个模型', model: '模型', share: '占比', input: '输入', output: '输出', cacheRead: '缓存读取', cacheWrite: '缓存写入',
+      about: '关于这些数据', other: '其他模型',
+      about1: '会话记录类来源由本机采集脚本读取，例如 Claude Code 读取 <code>~/.claude/projects</code>。token 含子代理，同一条回复只计一次，所以总数和 <code>/stats</code> 不同。',
+      about2: '标 <code>est</code> 的费用按单价估算，标 <code>actual</code> 的是平台账单金额。',
+      about3: '日期与钟点按 {tz} 时区划分。',
+      updated: '更新于 {t}', stale: '数据已过期 {n} 天',
+      wd: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'], wdShort: ['一', '二', '三', '四', '五', '六', '日'],
+    },
+  };
+  let lang = store.get('lang') || ((navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en');
+  const t = (k, vars) => { let s = (I18N[lang][k] != null ? I18N[lang][k] : I18N.en[k]); if (vars) for (const v in vars) s = s.replace('{' + v + '}', vars[v]); return s; };
+
+  /* ---------- theme ---------- */
+  let theme = store.get('theme') || 'system';
+  const THEME_ICON = {
+    system: '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 1.8a6.2 6.2 0 0 1 0 12.4z" fill="currentColor"/></svg>',
+    light: '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15M3 3l1.1 1.1M11.9 11.9L13 13M3 13l1.1-1.1M11.9 4.1L13 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+    dark: '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.6A5.8 5.8 0 0 1 6.4 2.5a5.8 5.8 0 1 0 7.1 7.1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  };
+  function applyTheme() {
+    if (theme === 'system') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', theme);
+  }
+
+  /* ---------- formatting ---------- */
+  const trim = (s) => s.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+  const sig = (v) => trim(v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2));
+  const tok = (n) => n >= 1e9 ? sig(n / 1e9) + 'B' : n >= 1e6 ? sig(n / 1e6) + 'M' : n >= 1e3 ? sig(n / 1e3) + 'K' : String(Math.round(n));
+  const money = (n, full) => { const c = (data && data.currency) || 'USD', base = {style: 'currency', currency: c, currencyDisplay: 'narrowSymbol'};
+    if (!n) return new Intl.NumberFormat('en-US', {...base, maximumFractionDigits: 0}).format(0);
+    if (!full && n >= 1e4) return new Intl.NumberFormat('en-US', {...base, notation: 'compact', maximumFractionDigits: 1}).format(n);
+    return new Intl.NumberFormat('en-US', {...base, maximumFractionDigits: n >= 100 || full ? 0 : 2}).format(n); };
+  const int = (n) => Math.round(n).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US');
+  const pct = (x) => x >= .995 ? '100%' : x >= .1 ? (x * 100).toFixed(1) + '%' : x >= .001 ? (x * 100).toFixed(2) + '%' : '<0.1%';
+  const D = (s) => new Date(s + 'T00:00:00Z');
+  const K = (d) => d.toISOString().slice(0, 10);
+  const add = (d, n) => new Date(d.getTime() + n * 864e5);
+  const diff = (a, b) => Math.round((b - a) / 864e5);
+  const dateFmt = (d, withWd) => { const o = {month: 'short', day: 'numeric', timeZone: 'UTC'}; if (withWd) o.weekday = 'short';
+    return d.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', o); };
+  const monthFmt = (d) => d.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', {year: 'numeric', month: 'short', timeZone: 'UTC'});
+  const axisDate = (d) => d.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', {month: 'numeric', day: 'numeric', timeZone: 'UTC'});
+
+  /* ---------- names & colors ---------- */
+  const PALETTE = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s4)', 'var(--s5)', 'var(--s6)', 'var(--s7)'];
+  const KNOWN = {'claude-opus-5-5': 'Opus 5.5', 'claude-opus-5': 'Opus 5', 'claude-sonnet-5-5': 'Sonnet 5.5', 'claude-haiku-5-5': 'Haiku 5.5',
+    'claude-fable-5-1': 'Fable 5.1', 'claude-fable-5': 'Fable 5', 'example-model-a': 'Example A', 'example-model-b': 'Example B'};
+  const modelName = (m) => m === 'other' ? t('other') : KNOWN[m] || m.replace(/^claude-/, '');
+
+  let data = null, srcColor = {}, modelColor = {};
+  const state = {src: store.get('src') || 'all', range: store.get('range') || 'all', metric: store.get('metric') || 'cost'};
+
+  const rowTok = (r) => (r.in || 0) + (r.out || 0) + (r.cr || 0) + (r.cw || 0);
+  function rowCost(r) {
+    if (r.cost != null) return r.cost;
+    const p = (data.prices && data.prices.per_mtok || {})[r.model];
+    return p ? ((r.in || 0) * p[0] + (r.out || 0) * p[1] + (r.cr || 0) * p[2] + (r.cw || 0) * p[3]) / 1e6 : 0;
+  }
+  const val = (r) => state.metric === 'cost' ? rowCost(r) : rowTok(r);
+  const fmt = (n, full) => state.metric === 'cost' ? money(n, full) : tok(n);
+  const srcName = (id) => (data.sources.find(s => s.id === id) || {name: id}).name;
+  const gKey = (r) => state.src === 'all' ? r.src : r.model;
+  const gName = (g) => state.src === 'all' ? srcName(g) : modelName(g);
+  const gColor = (g) => state.src === 'all' ? srcColor[g] : modelColor[g] || 'var(--s7)';
+  const today = () => D(data.generated.slice(0, 10));
+
+  function view() {
+    const rows = data.rows.filter(r => state.src === 'all' || r.src === state.src);
+    const last = today();
+    const first = rows.length ? D(rows.reduce((m, r) => r.d < m ? r.d : m, rows[0].d)) : last;
+    const start = state.range === 'all' ? first : add(last, -(Number(state.range) - 1));
+    const inR = rows.filter(r => { const d = D(r.d); return d >= start && d <= last; });
+    let prev = null;
+    if (state.range !== 'all') {
+      const ps = add(start, -Number(state.range)), pe = add(start, -1);
+      const pr = rows.filter(r => { const d = D(r.d); return d >= ps && d <= pe; });
+      if (pr.length) prev = pr.reduce((s, r) => s + val(r), 0);
+    }
+    const groups = {}, byDay = new Map();
+    inR.forEach(r => { const g = gKey(r), v = val(r); groups[g] = (groups[g] || 0) + v;
+      const m = byDay.get(r.d) || byDay.set(r.d, {}).get(r.d); m[g] = (m[g] || 0) + v; });
+    const order = Object.keys(groups).sort((a, b) => groups[b] - groups[a]);
+    const total = inR.reduce((s, r) => s + val(r), 0);
+    const nAct = inR.filter(r => r.cost != null).length;
+    const kind = state.metric !== 'cost' ? '' : nAct === inR.length ? t('actual') : nAct ? t('mixed') : t('est');
+    return {rows, inR, start, last, prev, groups, order, byDay, total, kind};
+  }
+  // All-time charts start at the first busy stretch, so one stray early day doesn't flatten months of axis.
+  function denseStart(keys) { const ks = keys.slice().sort(); return ks.find((d, i) => i + 4 < ks.length && diff(D(d), D(ks[i + 4])) < 14) || ks[0]; }
+  const dayTotal = (m) => m ? Object.values(m).reduce((a, b) => a + b, 0) : 0;
+
+  /* ---------- tooltip ---------- */
+  function tipFor(host) {
+    let tip = host.querySelector(':scope > .tip');
+    if (!tip) { tip = E('div', 'tip'); tip.hidden = true; host.appendChild(tip); }
+    return {
+      show(x, y, title, rows) {
+        tip.replaceChildren(E('div', 't', title));
+        rows.forEach(r => { if (r === '-') { tip.appendChild(E('div', 'sep')); return; }
+          const row = E('div', 'r'), a = E('span'); if (r[2]) { const d = E('i', 'dot'); d.style.background = r[2]; a.appendChild(d); }
+          a.append(r[0]); row.append(a, E('b', null, r[1])); tip.appendChild(row); });
+        tip.hidden = false;
+        const w = tip.offsetWidth, h = tip.offsetHeight, W = host.clientWidth;
+        let left = x + 14; if (left + w > W) left = x - w - 14; if (left < 0) left = Math.max(0, Math.min(W - w, x - w / 2));
+        let top = y - h - 12; if (top < -8) top = y + 16;
+        tip.style.left = left + 'px'; tip.style.top = top + 'px';
+      },
+      hide() { tip.hidden = true; },
+    };
+  }
+
+  /* ---------- static text ---------- */
+  function renderChrome() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    $('r-all').textContent = t('all'); $('r-30').textContent = t('d30'); $('r-7').textContent = t('d7');
+    $('m-cost').textContent = t('cost'); $('m-tok').textContent = t('tokens');
+    $('langBtn').textContent = t('lang'); $('langBtn').setAttribute('aria-label', lang === 'zh' ? 'Switch to English' : '切换到中文');
+    $('themeBtn').innerHTML = THEME_ICON[theme] + '<span>' + t(theme === 'system' ? 'themeSystem' : theme === 'light' ? 'themeLight' : 'themeDark') + '</span>';
+    $('srcSeg').setAttribute('aria-label', 'Source'); $('rngSeg').setAttribute('aria-label', 'Range'); $('metricSeg').setAttribute('aria-label', 'Metric');
+    $('quotaTitle').textContent = t('quotas'); $('dailyTitle').textContent = t('daily'); $('calTitle').textContent = t('calendar');
+    $('punchTitle').textContent = t('rhythm'); $('tblTitle').textContent = t('breakdown'); $('aboutTitle').textContent = t('about');
+    const ramp = $('ramp'); ramp.replaceChildren(t('less')); for (let i = 0; i < 5; i++) { const x = E('i'); x.style.background = `var(--h${i})`; ramp.appendChild(x); } ramp.append(t('more'));
+    document.querySelectorAll('#rngSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.r === state.range)));
+    document.querySelectorAll('#metricSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === state.metric)));
+    const seg = $('srcSeg'); seg.replaceChildren();
+    [{id: 'all', name: t('allSources')}].concat(data.sources).forEach(s => {
+      const b = E('button'); b.type = 'button'; b.id = 'src-' + s.id;
+      if (s.id !== 'all') { const d = E('i', 'dot'); d.style.background = srcColor[s.id]; b.appendChild(d); }
+      b.append(s.name); b.setAttribute('aria-pressed', String(state.src === s.id));
+      b.addEventListener('click', () => { state.src = s.id; store.set('src', s.id); render(); });
+      seg.appendChild(b);
+    });
+    const notes = [];
+    if (data.demo) notes.push(t('demoNotice'));
+    if (data.prices && data.prices.verified === false) notes.push(t('pricesNotice'));
+    const noticeKey = 'notice:' + notes.join('|');
+    $('notice').hidden = !notes.length || store.get('dismissed') === noticeKey;
+    $('noticeText').textContent = notes.join(' ');
+    $('noticeClose').setAttribute('aria-label', lang === 'zh' ? '关闭提示' : 'Dismiss');
+    $('noticeClose').onclick = () => { store.set('dismissed', noticeKey); $('notice').hidden = true; };
+    const ab = $('aboutBody'); ab.innerHTML = '';
+    ['about1', 'about2'].forEach(k => { const p = E('p'); p.innerHTML = t(k); ab.appendChild(p); });
+    ab.appendChild(E('p', null, t('about3', {tz: data.timezone || 'UTC'})));
+    const gen = new Date(data.generated), age = (Date.now() - gen) / 864e5;
+    const when = gen.toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US', {timeZone: data.timezone, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false});
+    $('footLeft').textContent = (age > 2 && !data.demo ? t('stale', {n: Math.floor(age)}) + ' · ' : '') + t('updated', {t: when});
+  }
+
+  /* ---------- hero ---------- */
+  function renderHero(v) {
+    $('heroLabel').textContent = state.metric === 'cost' ? t('spend') : t('tokUsed');
+    const big = $('big'); big.replaceChildren(fmt(v.total, true));
+    if (state.metric === 'tok') big.appendChild(E('span', 'unit', 'tokens'));
+    const meta = $('heroMeta'); meta.replaceChildren();
+    if (v.prev != null && v.prev > 0) {
+      const ch = v.total / v.prev - 1;
+      meta.appendChild(E('span', 'pill ' + (ch >= 0 ? 'up' : 'down'), (ch >= 0 ? '↑ ' : '↓ ') + Math.abs(ch * 100).toFixed(0) + '%'));
+      meta.appendChild(E('span', null, t('vsPrev', {n: state.range})));
+    }
+    const span = diff(v.start, v.last) + 1;
+    meta.appendChild(E('span', null, t('perDay', {v: fmt(v.total / span)})));
+    meta.appendChild(E('span', null, dateFmt(v.start) + ' – ' + dateFmt(v.last)));
+    if (v.kind) meta.appendChild(E('span', 'pill est', v.kind));
+
+    const box = $('spark'); box.replaceChildren();
+    const s0 = state.range === 'all' && v.byDay.size ? D(denseStart([...v.byDay.keys()])) : v.start;
+    const days = []; for (let d = s0; d <= v.last; d = add(d, 1)) days.push(d);
+    const ys = days.map(d => dayTotal(v.byDay.get(K(d))));
+    const sm = ys.map((_, i) => { const w = ys.slice(Math.max(0, i - 2), i + 3); return w.reduce((a, b) => a + b, 0) / w.length; });
+    const W = Math.max(240, box.clientWidth), H = 84, mx = Math.max(1e-9, ...sm);
+    const x = (i) => days.length < 2 ? W / 2 : i / (days.length - 1) * W, y = (n) => H - 3 - n / mx * (H - 10);
+    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'none', 'aria-hidden': 'true'}, box);
+    const gid = 'sg' + Math.random().toString(36).slice(2, 7);
+    const g = S('linearGradient', {id: gid, x1: 0, y1: 0, x2: 0, y2: 1}, S('defs', {}, svg));
+    S('stop', {offset: 0, 'stop-color': 'var(--accent)', 'stop-opacity': .22}, g); S('stop', {offset: 1, 'stop-color': 'var(--accent)', 'stop-opacity': 0}, g);
+    let d = ''; sm.forEach((n, i) => d += (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(n).toFixed(1));
+    S('path', {d: d + `L${W},${H}L0,${H}Z`, fill: `url(#${gid})`}, svg);
+    S('path', {d, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke'}, svg);
+
+    $('compLabel').textContent = state.src === 'all' ? t('bySource') : t('byModel');
+    const st = $('stack'), comp = $('comp'); st.replaceChildren(); comp.replaceChildren();
+    if (!v.total) { comp.appendChild(E('div', 'empty', t('none'))); return; }
+    v.order.forEach(k => {
+      const share = v.groups[k] / v.total;
+      const s = E('span'); s.style.background = gColor(k); s.style.flex = String(Math.max(share, .004)); st.appendChild(s);
+      const li = E('div', 'li'), dot = E('i', 'dot'); dot.style.background = gColor(k);
+      li.append(dot, E('span', 'n', gName(k)), E('span', 'v', fmt(v.groups[k])), E('span', 'p', pct(share)));
+      comp.appendChild(li);
+    });
+  }
+
+  /* ---------- stats ---------- */
+  function streaks(rows) {
+    const ds = [...new Set(rows.filter(r => rowTok(r) > 0 || r.cost > 0).map(r => r.d))].sort().map(D);
+    let best = 0, run = 0, p = null;
+    ds.forEach(d => { run = p && diff(p, d) === 1 ? run + 1 : 1; best = Math.max(best, run); p = d; });
+    return {best, current: p && diff(p, today()) <= 1 ? run : 0};
+  }
+  function renderStats(v) {
+    const box = $('stats'); box.replaceChildren();
+    const sessions = v.inR.reduce((s, r) => s + (r.sessions || 0), 0), requests = v.inR.reduce((s, r) => s + (r.requests || 0), 0);
+    const active = new Set(v.inR.map(r => r.d)).size, span = diff(v.start, v.last) + 1;
+    let peak = null; v.byDay.forEach((m, d) => { const s = dayTotal(m); if (!peak || s > peak.v) peak = {d, v: s}; });
+    const st = streaks(v.rows), items = [];
+    if (sessions) items.push({k: t('sessions'), v: int(sessions), d: active ? t('perActive', {v: (sessions / active).toFixed(1)}) : ''});
+    if (requests) items.push({k: t('requests'), v: int(requests), d: t('billingOnly')});
+    items.push({k: t('activeDays'), v: String(active), small: '/' + span, d: t('ofDays', {p: pct(active / span)})});
+    items.push({k: t('peakDay'), v: peak ? dateFmt(D(peak.d)) : '—', d: peak ? fmt(peak.v) : ''});
+    items.push({k: t('streak'), tag: t('allTime'), v: String(st.current), small: ' ' + t('days'), d: t('longest', {n: st.best})});
+    const ls = data.longest_session;
+    if (ls && (state.src === 'all' || state.src === ls.src)) {
+      const m = Math.round(ls.ms / 6e4), dd = Math.floor(m / 1440), hh = Math.floor(m % 1440 / 60), mm = m % 60;
+      items.push({k: t('longestSession'), tag: t('allTime'), v: dd ? `${dd}d ${hh}h` : `${hh}h ${mm}m`, d: srcName(ls.src) + ' · ' + dateFmt(D(ls.start))});
+    }
+    box.style.setProperty('--n', items.length);
+    items.forEach(it => {
+      const c = E('div', 'stat'), k = E('div', 'k', it.k); if (it.tag) k.appendChild(E('em', null, it.tag));
+      const vv = E('div', 'v', it.v); if (it.small) vv.appendChild(E('small', null, it.small));
+      c.append(k, vv, E('div', 'd', it.d)); box.appendChild(c);
+    });
+  }
+
+  /* ---------- quotas ---------- */
+  function renderQuotas() {
+    const qs = (data.quotas || []).filter(q => state.src === 'all' || !q.src || q.src === state.src);
+    $('quotaCard').hidden = !qs.length;
+    const box = $('quotas'); box.replaceChildren();
+    $('quotaSub').textContent = '';
+    qs.forEach(q => {
+      const c = E('div', 'q'), top = E('div', 'q-top');
+      const win = q.window === '5h' ? t('window5h') : q.window === '7d' ? t('window7d') : q.window;
+      top.append(E('b', null, q.name), E('span', null, (q.src ? srcName(q.src) + ' · ' : '') + win));
+      const tr = E('div', 'track'), fill = E('span'); fill.style.width = Math.min(100, q.used * 100) + '%';
+      fill.style.background = q.used >= .9 ? 'var(--crit)' : q.used >= .7 ? 'var(--warn)' : 'var(--accent)'; tr.appendChild(fill);
+      const h = (new Date(q.resets) - Date.now()) / 36e5;
+      const left = h <= 0 ? t('reset') : t('resetsIn', {t: h >= 24 ? Math.floor(h / 24) + 'd ' + Math.round(h % 24) + 'h' : Math.max(1, Math.round(h)) + 'h'});
+      const bot = E('div', 'q-bot'); bot.append(E('span', null, t('left', {p: Math.max(0, Math.round((1 - q.used) * 100)) + '%'})), E('span', null, left));
+      c.append(top, E('div', 'q-val', Math.round(q.used * 100) + '%'), tr, bot); box.appendChild(c);
+    });
+  }
+
+  /* ---------- daily chart ---------- */
+  function niceStep(max, n) { const raw = max / n || 1, mag = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(s => s * mag).find(s => raw <= s); }
+  function renderDaily(v) {
+    const box = $('daily'), leg = $('dailyLegend'); box.replaceChildren(); leg.replaceChildren();
+    v.order.forEach(k => { const s = E('span'), d = E('i', 'dot'); d.style.background = gColor(k); s.append(d, gName(k)); leg.appendChild(s); });
+    const ma = E('span'); ma.append(E('i', 'ma'), t('avg7')); leg.appendChild(ma);
+    if (!v.total) { box.appendChild(E('div', 'empty', t('none'))); return; }
+    const start = state.range === 'all' ? D(denseStart([...v.byDay.keys()])) : v.start;
+    const days = []; for (let d = start; d <= v.last; d = add(d, 1)) days.push(d);
+    const tot = days.map(d => dayTotal(v.byDay.get(K(d))));
+    const avg = tot.map((_, i) => { const w = tot.slice(Math.max(0, i - 6), i + 1); return w.reduce((a, b) => a + b, 0) / w.length; });
+    const sorted = tot.filter(x => x > 0).sort((a, b) => a - b), p95 = sorted[Math.floor(sorted.length * .95)] || 0, mx = Math.max(...tot);
+    const cap = sorted.length > 10 && mx > p95 * 2 ? p95 * 1.35 : mx;
+    const W = Math.max(300, box.clientWidth), narrow = W < 600, H = narrow ? 230 : 300;
+    const m = {t: 22, r: 2, b: 26, l: narrow ? 46 : 58};
+    const step = niceStep(cap, narrow ? 3 : 4), top = Math.ceil(cap / step) * step || 1;
+    const iw = W - m.l - m.r, bw = iw / days.length, barW = Math.max(1.5, Math.min(18, bw * (days.length > 45 ? .7 : .58)));
+    const X = (i) => m.l + i * bw + bw / 2, Y = (n) => H - m.b - Math.min(n, top) / top * (H - m.t - m.b);
+    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': t('daily')}, box);
+    for (let y = 0; y <= top + 1e-9; y += step) {
+      S('line', {x1: m.l, x2: W - m.r, y1: Y(y), y2: Y(y), stroke: y ? 'var(--border-soft)' : 'var(--border)'}, svg);
+      const tx = S('text', {x: m.l - 10, y: Y(y) + 4, 'text-anchor': 'end'}, svg); tx.textContent = fmt(y);
+    }
+    const every = Math.max(1, Math.round(days.length / (narrow ? 4 : 8)));
+    days.forEach((d, i) => { if (i % every === 0) { const tx = S('text', {x: X(i), y: H - 6, 'text-anchor': 'middle'}, svg); tx.textContent = axisDate(d); } });
+    const hl = S('rect', {y: m.t - 6, height: H - m.t - m.b + 6, width: bw, rx: 6, fill: 'var(--text)', 'fill-opacity': .05, visibility: 'hidden'}, svg);
+    const cols = S('g', {}, svg);
+    const r = Math.min(4, barW / 2);
+    days.forEach((d, i) => {
+      const mrec = v.byDay.get(K(d)); if (!mrec) return;
+      const g = S('g', {class: 'grow', style: `animation-delay:${Math.min(400, i * 4)}ms`}, cols);
+      let acc = 0; const keys = v.order.filter(k => mrec[k]).reverse();
+      keys.forEach((k, j) => {
+        const y0 = Y(acc), y1 = Y(acc + mrec[k]); acc += mrec[k]; const h = y0 - y1; if (h < .3) return;
+        const isTop = j === keys.length - 1, rr = isTop ? Math.min(r, h) : 0, x0 = X(i) - barW / 2;
+        S('path', {d: `M${x0},${y0}V${y1 + rr}Q${x0},${y1} ${x0 + rr},${y1}H${x0 + barW - rr}Q${x0 + barW},${y1} ${x0 + barW},${y1 + rr}V${y0}Z`, fill: gColor(k)}, g);
+      });
+      if (tot[i] > top) {
+        const tx = S('text', {x: X(i), y: m.t - 8, 'text-anchor': 'middle', style: 'fill:var(--text-2);font-weight:500'}, svg); tx.textContent = fmt(tot[i]) + ' ↑';
+      }
+    });
+    let pd = ''; avg.forEach((a, i) => pd += (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(a).toFixed(1));
+    S('path', {d: pd, fill: 'none', stroke: 'var(--text-2)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3', 'stroke-linejoin': 'round'}, svg);
+    const tip = tipFor(box);
+    const at = (ev) => { const b = svg.getBoundingClientRect(); return Math.max(0, Math.min(days.length - 1, Math.floor(((ev.clientX - b.left) * W / b.width - m.l) / bw))); };
+    const show = (ev) => {
+      const i = at(ev), mrec = v.byDay.get(K(days[i])) || {}, b = svg.getBoundingClientRect();
+      hl.setAttribute('x', X(i) - bw / 2); hl.setAttribute('visibility', 'visible');
+      const rows = v.order.filter(k => mrec[k]).map(k => [gName(k), fmt(mrec[k]), gColor(k)]);
+      tip.show(X(i) * b.width / W, Y(tot[i]) * b.width / W, dateFmt(days[i], true),
+        rows.length ? rows.concat(['-', [t('total'), fmt(tot[i])], [t('avg7'), fmt(avg[i])]]) : [[t('noActivity'), '']]);
+    };
+    svg.addEventListener('pointermove', show); svg.addEventListener('pointerdown', show);
+    svg.addEventListener('pointerleave', () => { hl.setAttribute('visibility', 'hidden'); tip.hide(); });
+  }
+
+  /* ---------- calendar ---------- */
+  function renderCalendar(v) {
+    const box = $('months'); box.replaceChildren();
+    const tot = new Map(); v.byDay.forEach((m, d) => tot.set(d, dayTotal(m)));
+    const keys = [...tot.keys()].sort();
+    if (!keys.length) { box.appendChild(E('div', 'empty', t('none'))); $('calSub').textContent = ''; $('calRead').textContent = ''; return; }
+    const ds = state.range === 'all' ? denseStart(keys) : keys[0], skipped = keys.filter(k => k < ds).length;
+    $('calSub').textContent = t('activeCount', {n: keys.length}) + (skipped ? ' · ' + t('hidden', {n: skipped}) : '');
+    $('calRead').textContent = t('hoverDay');
+    const vals = [...tot.values()].sort((a, b) => a - b), q = (p) => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))];
+    const cuts = [q(.25), q(.5), q(.75)], lvl = (x) => !x ? 0 : x <= cuts[0] ? 1 : x <= cuts[1] ? 2 : x <= cuts[2] ? 3 : 4;
+    const first = new Date(Date.UTC(D(ds).getUTCFullYear(), D(ds).getUTCMonth(), 1)), last = v.last;
+    const months = []; for (let mo = first; mo <= last; mo = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 1))) months.push(mo);
+    const weeksOf = (mo) => { const e = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 0)); return Math.ceil((((mo.getUTCDay() + 6) % 7) + e.getUTCDate()) / 7); };
+    const nW = months.reduce((s, mo) => s + weeksOf(mo), 0), gap = 3;
+    const fit = (per) => { const rowW = Math.max(...Array.from({length: Math.ceil(months.length / per)}, (_, i) => months.slice(i * per, i * per + per).reduce((s, mo) => s + weeksOf(mo), 0)));
+      return Math.floor((box.clientWidth - (per - 1) * 18 - 2) / rowW) - gap; };
+    let per = months.length; while (per > 1 && fit(per) < 11) per--;
+    const cell = Math.max(8, Math.min(22, fit(per)));
+    void nW;
+    const tip = tipFor(box);
+    months.forEach(mo => {
+      const end = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 0)), off = (mo.getUTCDay() + 6) % 7, wk = weeksOf(mo);
+      const wrap = E('div', 'month'), Wd = wk * (cell + gap) - gap, Hd = 7 * (cell + gap) - gap;
+      const svg = S('svg', {width: Wd, height: Hd, viewBox: `0 0 ${Wd} ${Hd}`, role: 'img', 'aria-label': monthFmt(mo)}, wrap);
+      let sum = 0;
+      for (let dd = 1; dd <= end.getUTCDate(); dd++) {
+        const d = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth(), dd)), pos = off + dd - 1;
+        const x = Math.floor(pos / 7) * (cell + gap), y = (pos % 7) * (cell + gap), val_ = tot.get(K(d)) || 0; sum += val_;
+        const future = d > last;
+        const rc = S('rect', {x, y, width: cell, height: cell, rx: Math.min(4, cell / 3.5), fill: future ? 'none' : `var(--h${lvl(val_)})`,
+          stroke: future ? 'var(--border)' : 'none', 'stroke-dasharray': future ? '2 2' : ''}, svg);
+        if (!future) {
+          const show = () => { const br = box.getBoundingClientRect(), r2 = rc.getBoundingClientRect();
+            tip.show(r2.left - br.left + r2.width / 2, r2.top - br.top, dateFmt(d, true), [[val_ ? fmt(val_) : t('noActivity'), '']]);
+            $('calRead').textContent = dateFmt(d, true) + ' · ' + (val_ ? fmt(val_) : t('noActivity')); };
+          rc.addEventListener('pointerenter', show); rc.addEventListener('pointerdown', show); rc.addEventListener('pointerleave', tip.hide);
+        }
+      }
+      const ml = E('div', 'ml'); ml.append(E('span', null, mo.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', {month: 'short', timeZone: 'UTC'})), E('b', null, fmt(sum)));
+      ml.style.width = Wd + 'px'; wrap.appendChild(ml); box.appendChild(wrap);
+    });
+  }
+
+  /* ---------- weekly rhythm ---------- */
+  function renderPunch() {
+    const box = $('punch'); box.replaceChildren();
+    const grid = Array.from({length: 7}, () => new Array(24).fill(0));
+    Object.entries(data.punch || {}).forEach(([s, rows]) => { if (state.src === 'all' || s === state.src) rows.forEach((r, d) => r.forEach((n, h) => grid[d][h] += n)); });
+    const flat = grid.flat(), mx = Math.max(1e-9, ...flat), sum = flat.reduce((a, b) => a + b, 0);
+    if (!sum) { box.appendChild(E('div', 'empty', t('none'))); $('punchSub').textContent = ''; $('punchRead').textContent = ''; return; }
+    const hourTot = grid[0].map((_, h) => grid.reduce((s, r) => s + r[h], 0)), peak = hourTot.indexOf(Math.max(...hourTot));
+    const hh = (h) => String(h).padStart(2, '0') + ':00';
+    $('punchSub').textContent = t('peak', {h: hh(peak)}) + ' · ' + (data.timezone || 'UTC');
+    $('punchRead').textContent = t('hoverSlot', {n: int(sum)});
+    const W = Math.max(280, box.clientWidth), lw = lang === 'zh' ? 22 : 18, cw = (W - lw) / 24, ch = Math.max(18, Math.min(28, cw * 1.15)), H = 7 * ch + 22;
+    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': t('rhythm')}, box);
+    const dn = I18N[lang].wdShort;
+    grid.forEach((row, d) => {
+      const tx = S('text', {x: 0, y: d * ch + ch / 2 + 4}, svg); tx.textContent = dn[d];
+      row.forEach((n, h) => {
+        const rad = n ? Math.max(1.6, Math.sqrt(n / mx) * Math.min(cw, ch) * .46) : 1.2;
+        S('circle', {cx: lw + h * cw + cw / 2, cy: d * ch + ch / 2, r: rad, fill: n ? (h === peak ? 'var(--accent)' : 'var(--h3)') : 'var(--border)', 'fill-opacity': n && h !== peak ? .8 : 1}, svg);
+      });
+    });
+    [0, 6, 12, 18].forEach(h => { const tx = S('text', {x: lw + h * cw + cw / 2, y: H - 4, 'text-anchor': 'middle'}, svg); tx.textContent = hh(h); });
+    const ring = S('rect', {width: cw, height: ch, rx: 6, fill: 'var(--text)', 'fill-opacity': .06, visibility: 'hidden'}, svg);
+    const tip = tipFor(box), wd = I18N[lang].wd;
+    const at = (ev) => { const b = svg.getBoundingClientRect(), x = (ev.clientX - b.left) * W / b.width, y = (ev.clientY - b.top) * W / b.width;
+      return [Math.max(0, Math.min(6, Math.floor(y / ch))), Math.max(0, Math.min(23, Math.floor((x - lw) / cw)))]; };
+    const show = (ev) => { const [d, h] = at(ev), b = svg.getBoundingClientRect(), k = b.width / W;
+      ring.setAttribute('x', lw + h * cw); ring.setAttribute('y', d * ch); ring.setAttribute('visibility', 'visible');
+      tip.show((lw + h * cw + cw / 2) * k, d * ch * k, wd[(d + 1) % 7] + ' ' + hh(h), [[t('messages', {n: int(grid[d][h])}), pct(grid[d][h] / sum)]]); };
+    svg.addEventListener('pointermove', show); svg.addEventListener('pointerdown', show);
+    svg.addEventListener('pointerleave', () => { ring.setAttribute('visibility', 'hidden'); tip.hide(); });
+  }
+
+  /* ---------- model table ---------- */
+  function renderTable(v) {
+    const by = {};
+    v.inR.forEach(r => { const k = r.src + '|' + r.model, o = by[k] || (by[k] = {src: r.src, model: r.model, in: 0, out: 0, cr: 0, cw: 0, cost: 0, est: false});
+      o.in += r.in || 0; o.out += r.out || 0; o.cr += r.cr || 0; o.cw += r.cw || 0; o.cost += rowCost(r); if (r.cost == null) o.est = true; });
+    const list = Object.values(by).map(o => ({...o, v: state.metric === 'cost' ? o.cost : o.in + o.out + o.cr + o.cw})).sort((a, b) => b.v - a.v);
+    $('tblSub').textContent = t('modelsCount', {n: list.length});
+    const tb = $('tbl'), mc = $('mcards'); tb.replaceChildren(); mc.replaceChildren();
+    if (!list.length) { mc.appendChild(E('div', 'empty', t('none'))); return; }
+    const color = (o) => state.src === 'all' ? srcColor[o.src] : modelColor[o.model] || 'var(--s7)';
+    const thead = E('thead'), hr = E('tr');
+    [[t('model'), ''], [t('share'), 'share'], [t('input'), ''], [t('output'), ''], [t('cacheRead'), ''], [t('cacheWrite'), ''], [t('cost'), '']].forEach(([n, c]) => { const th = E('th', c, n); th.scope = 'col'; hr.appendChild(th); });
+    thead.appendChild(hr); tb.appendChild(thead);
+    const body = E('tbody'), max = list[0].v || 1;
+    const nameCell = (o) => { const w = E('div', 'nm'), d = E('i', 'dot'), l = E('div', null, modelName(o.model)); d.style.background = color(o); l.appendChild(E('small', null, srcName(o.src))); w.append(d, l); return w; };
+    const barEl = (o) => { const b = E('div', 'bar'), tr = E('div', 'tr'), f = E('span'); f.style.width = (o.v / max * 100) + '%'; f.style.background = color(o); tr.appendChild(f); b.append(tr, E('em', null, pct(o.v / (v.total || 1)))); return b; };
+    const costEl = (o, tag) => { const s = E(tag, 'cost', money(o.cost)); if (o.est) s.appendChild(E('span', 'tag', t('est'))); return s; };
+    list.forEach(o => {
+      const tr = E('tr'), c1 = E('td'), c2 = E('td', 'share'); c1.appendChild(nameCell(o)); c2.appendChild(barEl(o));
+      tr.append(c1, c2, E('td', null, tok(o.in)), E('td', null, tok(o.out)), E('td', null, o.cr ? tok(o.cr) : '—'), E('td', null, o.cw ? tok(o.cw) : '—'), costEl(o, 'td'));
+      body.appendChild(tr);
+      const card = E('div', 'mc'), top = E('div', 'mc-top'); top.append(nameCell(o), costEl(o, 'span'));
+      const parts = E('div', 'mc-parts');
+      [[t('input'), o.in], [t('output'), o.out], [t('cacheRead'), o.cr], [t('cacheWrite'), o.cw]].forEach(([k, n]) => { const c = E('div', null, k); c.appendChild(E('b', null, n ? tok(n) : '—')); parts.appendChild(c); });
+      card.append(top, barEl(o), parts); mc.appendChild(card);
+    });
+    tb.appendChild(body);
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    if (state.src !== 'all' && !data.sources.some(s => s.id === state.src)) state.src = 'all';
+    const mt = {}; data.rows.forEach(r => { if (state.src === 'all' || r.src === state.src) mt[r.model] = (mt[r.model] || 0) + rowTok(r); });
+    modelColor = {}; Object.keys(mt).sort((a, b) => mt[b] - mt[a]).forEach((m, i) => modelColor[m] = PALETTE[i % PALETTE.length]);
+    renderChrome();
+    const v = view();
+    renderHero(v); renderStats(v); renderQuotas(); renderDaily(v); renderCalendar(v); renderPunch(); renderTable(v);
+  }
+
+  document.querySelectorAll('#rngSeg button').forEach(b => b.addEventListener('click', () => { state.range = b.dataset.r; store.set('range', state.range); render(); }));
+  document.querySelectorAll('#metricSeg button').forEach(b => b.addEventListener('click', () => { state.metric = b.dataset.m; store.set('metric', state.metric); render(); }));
+  $('langBtn').addEventListener('click', () => { lang = lang === 'zh' ? 'en' : 'zh'; store.set('lang', lang); if (data) render(); });
+  $('themeBtn').addEventListener('click', () => { theme = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'; store.set('theme', theme); applyTheme(); if (data) render(); });
+  addEventListener('scroll', () => $('top').classList.toggle('stuck', scrollY > 4), {passive: true});
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => data && render(), 120); });
+  applyTheme();
+
+  const demo = () => JSON.parse($('demo').textContent);
+  fetch('data/usage.json', {cache: 'no-store'})
+    .then(r => r.ok ? r.json() : null)
+    .then(d => d && Array.isArray(d.rows) && Array.isArray(d.sources) ? d : demo())
+    .catch(demo)
+    .then(d => { data = d; data.sources.forEach((s, i) => srcColor[s.id] = PALETTE[i % PALETTE.length]); render(); })
+    .catch(err => { const n = $('notice'); n.hidden = false; $('noticeText').textContent = 'Could not load data: ' + err.message; });
+})();
+</script>

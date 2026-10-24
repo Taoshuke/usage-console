@@ -1,7 +1,8 @@
-# Declare the encoding explicitly; without it browsers on a Chinese system may read UTF-8 as GBK.
+# Declare UTF-8 explicitly; without it browsers on a Chinese system may decode the page as GBK.
 /
   Content-Type: text/html; charset=utf-8
 /index.html
   Content-Type: text/html; charset=utf-8
 /data/*
   Content-Type: application/json; charset=utf-8
+  Cache-Control: no-store

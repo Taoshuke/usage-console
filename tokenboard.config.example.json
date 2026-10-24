@@ -1,0 +1,9 @@
+{
+  "timezone": "America/Los_Angeles",
+  "currency": "USD",
+  "prices": "prices.json",
+  "sources": {
+    "claude-code": { "enabled": true, "path": "~/.claude/projects" }
+  },
+  "quotas": []
+}

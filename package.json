@@ -1,9 +1,13 @@
 {
-  "name": "usage-console",
+  "name": "tokenboard",
   "private": true,
+  "license": "MIT",
   "scripts": {
+    "collect": "python3 collector/collect.py",
     "build": "python3 scripts/build.py",
-    "deploy": "wrangler deploy"
+    "demo": "python3 demo/generate.py && python3 scripts/build.py",
+    "deploy": "python3 collector/collect.py && python3 scripts/build.py && wrangler deploy",
+    "test": "python3 -m unittest discover -s tests"
   },
   "devDependencies": {
     "wrangler": "4.122.0"

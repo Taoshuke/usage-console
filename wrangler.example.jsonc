@@ -1,0 +1,18 @@
+{
+  // Copy to wrangler.jsonc and fill in your own names. wrangler.jsonc is git-ignored.
+  // The dashboard is static files only; protect it with Cloudflare Access (see docs/deploy.md).
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tokenboard",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "routes": [
+    { "pattern": "usage.example.com", "custom_domain": true }
+  ],
+  // Serve only on the custom domain: workers.dev and preview URLs are not covered by Access.
+  "workers_dev": false,
+  "preview_urls": false
+}

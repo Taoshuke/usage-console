@@ -1,9 +1,15 @@
-# 依赖与构建缓存
+# Build output and your own data: never commit real usage
+public/
+logs/
+tokenboard.config.json
+wrangler.jsonc
+
+# Dependencies and caches
 node_modules/
 .wrangler/
-logs/
+__pycache__/
 
-# 凭据与本地环境
+# Credentials and local environment
 .dev.vars
 .env
 .env.*

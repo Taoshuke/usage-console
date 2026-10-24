@@ -18,6 +18,7 @@ The page reads `data/usage.json` next to `index.html`. Version 1:
     { "d": "2026-10-07", "src": "claude-code", "model": "claude-opus-5-5",
       "in": 90000, "out": 1100000, "cr": 260000000, "cw": 6000000,
       "sessions": 4,          // optional: sessions that started that day with this model
+      "messages": 310,        // optional: messages that day
       "requests": 0,          // optional: API requests (billing sources)
       "cost": 12.34 }         // optional: actual billed amount; when absent, cost is estimated from prices
   ],
@@ -25,7 +26,8 @@ The page reads `data/usage.json` next to `index.html`. Version 1:
     { "src": "claude-code", "name": "Max plan", "window": "7d", "used": 0.68, "resets": "2026-10-27T09:00:00-07:00" }
   ],
   "punch": { "claude-code": [[0, 0, "... 24 hourly counts ..."], "... 7 rows, Monday first ..."] },
-  "longest_session": { "src": "claude-code", "ms": 20520000, "start": "2026-10-07" }
+  "longest_session": { "src": "claude-code", "ms": 20520000, "start": "2026-10-07" },
+  "complete": { "claude-code": "2026-10-23" }   // optional: per source, rows through this day are the full record
 }
 ```
 

@@ -20,20 +20,23 @@ def reply(uuid, mid, ts, model="claude-opus-5-5", sid="s1", side=False, usage=(1
 
 
 class ClaudeCodeTest(unittest.TestCase):
-    def run_on(self, files):
+    def run_on(self, files, cache=None):
         with tempfile.TemporaryDirectory() as root:
             for name, text in files.items():
                 p = Path(root, name)
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text(text, encoding="utf-8")
-            return claude_code.collect({"path": root}, ZoneInfo("UTC"))
+            cache_path = Path(root, "stats-cache.json")
+            if cache is not None:
+                cache_path.write_text(json.dumps(cache), encoding="utf-8")
+            return claude_code.collect({"path": str(Path(root, "projects")), "stats_cache": str(cache_path)}, ZoneInfo("UTC"))
 
     def test_counts_tokens_once_per_reply_and_skips_copies(self):
         log = (line(type="user", uuid="u1", timestamp="2026-10-07T09:00:00Z", sessionId="s1", message={"content": "hi"})
                + reply("a1", "m1", "2026-10-07T09:00:05Z")
                + reply("a2", "m1", "2026-10-07T09:00:06Z")    # same reply streamed over two lines
                + reply("a3", "m2", "2026-10-07T11:30:00Z", side=True, usage=(1, 1, 1, 1)))  # subagent
-        out = self.run_on({"p/s1.jsonl": log, "p/s1-resumed.jsonl": log})  # a resume copies earlier lines
+        out = self.run_on({"projects/p/s1.jsonl": log, "projects/p/s1-resumed.jsonl": log})  # a resume copies earlier lines
         self.assertEqual(out["rows"], [{"d": "2026-10-07", "src": "claude-code", "model": "claude-opus-5-5",
                                         "in": 11, "out": 21, "cr": 301, "cw": 41, "sessions": 1}])
         # prompt + one main-thread reply, both at 09:00 on a Wednesday (weekday 2)
@@ -47,9 +50,38 @@ class ClaudeCodeTest(unittest.TestCase):
                + line(type="user", uuid="u2", timestamp="2026-10-07T09:00:00Z", sessionId="s1", isMeta=True, message={"content": "x"})
                + reply("a1", "m1", "2026-10-07T09:00:05Z", model="<synthetic>")
                + '{"type":"assistant","uuid":"a9"')
-        out = self.run_on({"p/s1.jsonl": log})
+        out = self.run_on({"projects/p/s1.jsonl": log})
         self.assertEqual(out["rows"], [])
         self.assertIsNone(out["punch"])
+
+    def test_days_in_the_stats_cache_take_its_numbers(self):
+        log = (line(type="user", uuid="u1", timestamp="2026-10-07T09:00:00Z", sessionId="s1", message={"content": "hi"})
+               + reply("a1", "m1", "2026-10-07T09:00:05Z", usage=(1, 2, 6, 1))
+               + reply("a2", "m2", "2026-10-08T09:00:05Z", usage=(5, 5, 5, 5)))
+        cache = {"lastComputedDate": "2026-10-07",
+                 "dailyActivity": [{"date": "2026-02-21", "messageCount": 9, "sessionCount": 1},
+                                   {"date": "2026-10-07", "messageCount": 40, "sessionCount": 3}],
+                 "dailyModelTokens": [{"date": "2026-02-21", "tokensByModel": {"claude-old": 1000}},
+                                      {"date": "2026-10-07", "tokensByModel": {"claude-opus-5-5": 200, "claude-haiku": 7}}],
+                 "modelUsage": {"claude-old": {"inputTokens": 1, "outputTokens": 1, "cacheReadInputTokens": 8,
+                                               "cacheCreationInputTokens": 0}},
+                 "longestSession": {"duration": 7200000, "timestamp": "2026-02-21T10:00:00Z"}}
+        out = self.run_on({"projects/p/s1.jsonl": log}, cache)
+        rows = {(r["d"], r["model"]): r for r in out["rows"]}
+        tok = lambda r: r["in"] + r["out"] + r["cr"] + r["cw"]
+        # logs gone for February: the model's all-time mix splits the cached total
+        self.assertEqual(rows[("2026-02-21", "claude-old")], {"d": "2026-02-21", "src": "claude-code", "model": "claude-old",
+                                                             "in": 100, "out": 100, "cr": 800, "cw": 0, "sessions": 1, "messages": 9})
+        # logged day: cached total in the logged proportions; messages and sessions go to the busiest model
+        opus = rows[("2026-10-07", "claude-opus-5-5")]
+        self.assertEqual((tok(opus), opus["in"], opus["out"], opus["cr"], opus["cw"]), (200, 20, 40, 120, 20))
+        self.assertEqual((opus["sessions"], opus["messages"]), (3, 40))
+        self.assertEqual(tok(rows[("2026-10-07", "claude-haiku")]), 7)
+        self.assertNotIn("sessions", rows[("2026-10-07", "claude-haiku")])
+        # after the cache: counted from the logs
+        self.assertEqual(tok(rows[("2026-10-08", "claude-opus-5-5")]), 20)
+        self.assertEqual(out["longest_session"], {"src": "claude-code", "ms": 7200000, "start": "2026-02-21"})
+        self.assertEqual(out["complete_through"], "2026-10-07")
 
 
 if __name__ == "__main__":

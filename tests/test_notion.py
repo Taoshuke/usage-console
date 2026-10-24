@@ -34,8 +34,8 @@ ROW = {"d": "2026-10-07", "src": "claude-code", "model": "claude-opus-5-5", "in"
 
 
 class NotionSinkTest(unittest.TestCase):
-    def run_push(self, fake, rows):
-        data = {"rows": rows, "sources": [{"id": "claude-code", "name": "Claude Code", "kind": "logs"}],
+    def run_push(self, fake, rows, complete=None):
+        data = {"rows": rows, "complete": complete or {}, "sources": [{"id": "claude-code", "name": "Claude Code", "kind": "logs"}],
                 "generated": "g", "timezone": "UTC", "currency": "USD", "prices": {}, "quotas": [], "longest_session": None, "punch": {}}
         with mock.patch.dict(os.environ, {"NOTION_TOKEN": "x"}), mock.patch.object(notion, "call", fake.call), \
                 mock.patch.object(notion, "query_all", fake.query_all), mock.patch.object(notion, "WRITE_PAUSE", 0):
@@ -79,6 +79,15 @@ class NotionSinkTest(unittest.TestCase):
         methods = [(m, p) for m, p, b in fake.writes if p == "/pages/p1" or (b and b.get("parent") and not plain_key(b).startswith("@"))]
         self.assertEqual(methods, [("PATCH", "/pages/p1"), ("POST", "/pages")])
         self.assertFalse(any(p == "/pages/p2" for _, p, _ in fake.writes))
+
+    def test_trashes_stale_rows_only_where_the_source_is_complete(self):
+        def stored(key):
+            return page(key, {"Key": {"title": [{"plain_text": key}]}})
+        fake = FakeNotion([stored("2026-10-05|claude-code|old"), stored("2026-10-09|claude-code|old"),
+                           stored("2026-10-05|codex|old")], [])
+        self.run_push(fake, [], complete={"claude-code": "2026-10-07"})
+        trashed = [p for m, p, b in fake.writes if b == {"archived": True}]
+        self.assertEqual(trashed, ["/pages/2026-10-05|claude-code|old"])
 
 
 if __name__ == "__main__":

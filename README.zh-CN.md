@@ -49,7 +49,7 @@ tokenboard 以 Cloudflare Worker 静态站点的形式部署在你自己的域�
 
 ## 统计口径
 
-Claude Code 的 token 含子代理，一条回复分多行写进记录的只计一次，所以总数和 Claude Code 自带的 `/stats` 不同。会话记录类来源的费用按 `prices.json` 里的单价预估；仓库里的单价是占位值，请按服务商当前的价格核对后把 `"verified"` 改为 `true`。计费类来源可以提供实际金额，页面上标为“实际”。
+Claude Code 的数字和它自带的 `/stats` 一致：`/stats` 已计算到的日期，token、消息数、会话数直接取自 `~/.claude/stats-cache.json`；之后的日期才从会话记录统计（含子代理，一条回复分多行写进记录的只计一次）。如果想全部从会话记录统计，在该来源的配置里设置 `"use_stats_cache": false`。会话记录类来源的费用按 `prices.json` 里的单价预估；仓库里的单价是占位值，请按服务商当前的价格核对后把 `"verified"` 改为 `true`。计费类来源可以提供实际金额，页面上标为“实际”。
 
 ## 开发
 

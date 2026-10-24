@@ -1,6 +1,15 @@
-"""Claude Code adapter: reads the session logs under ~/.claude/projects.
+"""Claude Code adapter: reads Claude Code's /stats cache and the session logs under ~/.claude/projects.
 
-Counting rules (they differ from Claude Code's /stats, which reads its own cache):
+Days the cache has computed (~/.claude/stats-cache.json, through its lastComputedDate) take its numbers, so
+tokens, messages and sessions match /stats exactly:
+- each model's daily tokens come from the cache; they are split into input, output, cache read and cache
+  write in the proportions the logs show for that day and model, or the model's all-time proportions when
+  the logs for that day are gone
+- the day's messages and sessions come from the cache and go to the row of the day's busiest model
+- the longest session is the one the cache reports
+Days after that are counted from the logs with the rules below.
+
+Log counting rules (they differ from /stats):
 - a session is a main-thread sessionId; it counts on the day of its first message, under the model
   of its first reply
 - tokens are input + output + cache read + cache write of every assistant reply, subagents included;
@@ -11,10 +20,13 @@ import json
 import os
 from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
 
 SOURCE = {"id": "claude-code", "name": "Claude Code", "kind": "logs"}
 PARTS = (("in", "input_tokens"), ("out", "output_tokens"), ("cr", "cache_read_input_tokens"),
          ("cw", "cache_creation_input_tokens"))
+CACHE_PARTS = (("in", "inputTokens"), ("out", "outputTokens"), ("cr", "cacheReadInputTokens"),
+               ("cw", "cacheCreationInputTokens"))
 
 
 def _is_tool_result(content):
@@ -22,7 +34,84 @@ def _is_tool_result(content):
         isinstance(c, dict) and c.get("type") == "tool_result" for c in content)
 
 
+def load_cache(path):
+    """The /stats cache as {through, days: {day: {model: tokens}}, activity: {day: (messages, sessions)},
+    mix: {model: {part: tokens}}, longest}, or None when there is no usable cache."""
+    try:
+        cache = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    days = {}
+    for d in cache.get("dailyModelTokens") or []:
+        by_model = d.get("tokensByModel") or {k: v for k, v in d.items() if k != "date" and isinstance(v, (int, float))}
+        days[d["date"]] = {m: int(n) for m, n in by_model.items() if n}
+    activity = {d["date"]: (d.get("messageCount") or 0, d.get("sessionCount") or 0)
+                for d in cache.get("dailyActivity") or []}
+    through = cache.get("lastComputedDate") or max(list(days) + list(activity), default=None)
+    if not through:
+        return None
+    mix = {m: {k: u.get(f) or 0 for k, f in CACHE_PARTS}
+           for m, u in (cache.get("modelUsage") or {}).items() if isinstance(u, dict)}
+    return {"through": through, "days": days, "activity": activity, "mix": mix,
+            "longest": cache.get("longestSession")}
+
+
+def split(total, weights):
+    """Splits total into integer parts proportional to weights (input, output, cache read, cache write)."""
+    keys = [k for k, _ in PARTS]
+    w = [max(weights.get(k, 0), 0) for k in keys]
+    if not sum(w):
+        w = [0, 0, 1, 0]  # nothing to go by: count it all as cache read, the bulk of Claude Code's tokens
+    parts = [total * x // sum(w) for x in w]
+    parts[w.index(max(w))] += total - sum(parts)
+    return dict(zip(keys, parts))
+
+
+def from_cache(cache, log_rows):
+    """Rows for the days the cache covers; log rows only lend their token proportions."""
+    logged = {(r["d"], r["model"]): r for r in log_rows}
+    rows = []
+    for day in sorted(set(cache["days"]) | set(cache["activity"])):
+        if day > cache["through"]:
+            continue
+        models = cache["days"].get(day, {})
+        day_rows = []
+        for model, total in sorted(models.items()):
+            mix = logged.get((day, model)) or cache["mix"].get(model, {})
+            day_rows.append({"d": day, "src": SOURCE["id"], "model": model, **split(total, mix)})
+        messages, sessions = cache["activity"].get(day, (0, 0))
+        if (messages or sessions) and not day_rows:
+            day_rows.append({"d": day, "src": SOURCE["id"], "model": "unknown", **split(0, {})})
+        if day_rows:
+            top = max(day_rows, key=lambda r: models.get(r["model"], 0))
+            if sessions:
+                top["sessions"] = sessions
+            if messages:
+                top["messages"] = messages
+        rows += day_rows
+    return rows
+
+
+def cached_longest(longest):
+    try:
+        start = datetime.fromisoformat(longest["timestamp"].replace("Z", "+00:00")).date().isoformat()
+        return {"src": SOURCE["id"], "ms": int(longest["duration"]), "start": start}
+    except (TypeError, KeyError, ValueError, AttributeError):
+        return None
+
+
 def collect(options, tz):
+    result = collect_logs(options, tz)
+    cache = load_cache(os.path.expanduser(options.get("stats_cache", "~/.claude/stats-cache.json")))
+    if options.get("use_stats_cache", True) and cache:
+        later = [r for r in result["rows"] if r["d"] > cache["through"]]
+        result["rows"] = from_cache(cache, result["rows"]) + later
+        result["longest_session"] = cached_longest(cache["longest"]) or result["longest_session"]
+        result["complete_through"] = cache["through"]
+    return result
+
+
+def collect_logs(options, tz):
     root = os.path.expanduser(options.get("path", "~/.claude/projects"))
     seen_uuids, seen_usage, seen_replies = set(), set(), set()
     usage = defaultdict(lambda: defaultdict(int))     # (day, model) -> part -> tokens

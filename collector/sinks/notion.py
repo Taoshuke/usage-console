@@ -6,7 +6,9 @@ One database holds the data:
   in the Value column; they have no date, so a view filtered on "Date is not empty" shows only usage
 
 The collector upserts into them; the Worker in src/worker.js reads them back. Rows that the collector no
-longer sees (for example days whose local logs were cleaned up) are left alone, so Notion keeps the history.
+longer sees (for example days whose local logs were cleaned up) are left alone, so Notion keeps the history,
+except where a source declares its rows complete through a day (data["complete"]): its other rows up to that
+day are moved to the trash, so a re-count never leaves stale rows behind.
 
     python3 collector/sinks/notion.py init PARENT_PAGE_ID   # create the database under a page
 """
@@ -22,7 +24,7 @@ VERSION = "2022-06-28"
 TEXT_CHUNK = 2000            # Notion caps one rich-text item at 2000 characters
 WRITE_PAUSE = 0.34           # stay under the API's average limit of three requests per second
 NUMBERS = (("in", "Input"), ("out", "Output"), ("cr", "Cache read"), ("cw", "Cache write"),
-           ("sessions", "Sessions"), ("requests", "Requests"), ("cost", "Cost"))
+           ("sessions", "Sessions"), ("messages", "Messages"), ("requests", "Requests"), ("cost", "Cost"))
 SETTINGS = ("generated", "timezone", "currency", "sources", "prices", "quotas", "longest_session", "punch")
 
 
@@ -132,6 +134,15 @@ def push(data, options, log=print):
             created += 1
         time.sleep(WRITE_PAUSE)
 
+    removed = 0
+    fresh = {row_key(r) for r in data["rows"]}
+    for key, (page_id, _) in existing.items():
+        d, src, _ = key.split("|", 2)
+        if key not in fresh and d <= data.get("complete", {}).get(src, ""):
+            call(token, "PATCH", f"/pages/{page_id}", {"archived": True})
+            removed += 1
+            time.sleep(WRITE_PAUSE)
+
     if "sources" in settings:  # keep sources other collectors registered earlier
         try:
             known = {s["id"]: s for s in json.loads(settings["sources"][1])}
@@ -149,7 +160,8 @@ def push(data, options, log=print):
         else:
             call(token, "POST", "/pages", {"parent": {"database_id": db}, "properties": props})
         time.sleep(WRITE_PAUSE)
-    log(f"notion: {created} rows created, {updated} updated, {len(data['rows']) - created - updated} unchanged")
+    log(f"notion: {created} rows created, {updated} updated, {removed} removed, "
+        f"{len(data['rows']) - created - updated} unchanged")
 
 
 def init(parent_page_id):
@@ -161,7 +173,7 @@ def init(parent_page_id):
         "title": [{"type": "text", "text": {"content": "tokenboard"}}],
         "properties": {"Key": {"title": {}}, "Date": {"date": {}}, "Source": {"select": {}}, "Model": {"rich_text": {}},
                        "Input": num, "Output": num, "Cache read": num, "Cache write": num, "Sessions": num,
-                       "Requests": num, "Cost": {"number": {"format": "dollar"}}, "Value": {"rich_text": {}}}})
+                       "Messages": num, "Requests": num, "Cost": {"number": {"format": "dollar"}}, "Value": {"rich_text": {}}}})
     print(json.dumps({"database": db["id"]}, indent=2))
 
 

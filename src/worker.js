@@ -4,7 +4,7 @@ const NOTION = 'https://api.notion.com/v1';
 const VERSION = '2022-06-28';
 const CACHE_SECONDS = 60;
 const NUMBERS = [['in', 'Input'], ['out', 'Output'], ['cr', 'Cache read'], ['cw', 'Cache write'],
-  ['sessions', 'Sessions'], ['requests', 'Requests'], ['cost', 'Cost']];
+  ['sessions', 'Sessions'], ['messages', 'Messages'], ['requests', 'Requests'], ['cost', 'Cost']];
 
 export default {
   async fetch(request, env, ctx) {

@@ -38,7 +38,7 @@ def main(argv=None):
     prices_path = (args.config.parent / config.get("prices", "prices.json")).resolve()
     prices = load_json(prices_path) if prices_path.exists() else {"verified": False, "per_mtok": {}}
 
-    sources, rows, punch, longest = [], [], {}, None
+    sources, rows, punch, longest, complete = [], [], {}, None, {}
     for source_id, options in config.get("sources", {}).items():
         if not options.get("enabled", True):
             continue
@@ -53,6 +53,8 @@ def main(argv=None):
         ls = result.get("longest_session")
         if ls and (longest is None or ls["ms"] > longest["ms"]):
             longest = ls
+        if result.get("complete_through"):
+            complete[source_id] = result["complete_through"]
         print(f"{source_id}: {len(result['rows'])} rows", file=sys.stderr)
 
     data = {
@@ -67,6 +69,8 @@ def main(argv=None):
         "punch": punch,
         "rows": sorted(rows, key=lambda r: (r["d"], r["src"], r["model"])),
     }
+    if complete:
+        data["complete"] = complete  # per source: through this day the rows are the full record
     if config.get("storage", "json") == "notion":
         notion.push(data, config["notion"], log=lambda m: print(m, file=sys.stderr))
         return

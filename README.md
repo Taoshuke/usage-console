@@ -31,4 +31,4 @@ python3 scripts/build.py
 
 ## 部署
 
-推送到 `main` 后由 Cloudflare Workers Builds 自动部署，部署命令 `npx wrangler deploy`，不需要构建命令，`public/` 已提交在仓库里。站点由 Cloudflare Access 应用“用量统计”保护，只放行本人邮箱。
+Worker `usage` 已在 Cloudflare 后台连接本仓库（Workers Builds），推送到 `main` 后自动部署：构建命令留空，`public/` 已提交在仓库里；部署命令 `npx wrangler deploy`。连接之前已有的提交不会自动部署，要靠下一次推送或在后台手动部署。站点由 Cloudflare Access 应用“用量统计”保护，只放行本人邮箱。

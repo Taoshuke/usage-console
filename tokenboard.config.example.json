@@ -1,6 +1,8 @@
 {
   "timezone": "America/Los_Angeles",
   "currency": "USD",
+  "storage": "json",
+  "notion": { "usage_database": "", "settings_database": "" },
   "prices": "prices.json",
   "sources": {
     "claude-code": { "enabled": true, "path": "~/.claude/projects" }

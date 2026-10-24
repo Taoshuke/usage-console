@@ -40,6 +40,8 @@ tokenboard deploys as a static-assets Cloudflare Worker on your own domain, prot
 you can open it. The collector runs on your machine and deploys with `wrangler`, so your usage never goes into
 the repository. See [docs/deploy.md](docs/deploy.md).
 
+Data can also live in Notion, so the site updates without a redeploy: see [docs/notion.md](docs/notion.md).
+
 ## Sources
 
 | Source | Status | Reads |
@@ -63,6 +65,7 @@ report billed amounts, which the page marks `Billed`.
 python3 -m unittest discover -s tests   # collector tests
 python3 demo/generate.py                # regenerate sample data
 python3 scripts/build.py --preview      # also writes public/preview.html, the bare page fragment
+python3 scripts/compare_stats.py        # compare the collector's counts with Claude Code's /stats cache
 ```
 
 ## License

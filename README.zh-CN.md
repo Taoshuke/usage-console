@@ -36,6 +36,8 @@ python3 -m http.server -d public 8000                       # 打开 http://loca
 
 tokenboard 以 Cloudflare Worker 静态站点的形式部署在你自己的域名上，用 Cloudflare Access 保护，只有你能打开。采集脚本在你的电脑上运行，用 `wrangler` 直接部署，用量数据不会进入代码仓库。详见 [docs/deploy.md](docs/deploy.md)。
 
+数据也可以存在 Notion 里，网站不用重新部署就能更新，见 [docs/notion.md](docs/notion.md)。
+
 ## 数据来源
 
 | 来源 | 状态 | 读取位置 |
@@ -55,6 +57,7 @@ Claude Code 的 token 含子代理，一条回复分多行写进记录的只计�
 python3 -m unittest discover -s tests   # 采集脚本的测试
 python3 demo/generate.py                # 重新生成示例数据
 python3 scripts/build.py --preview      # 另外生成 public/preview.html，即不带文档外壳的页面片段
+python3 scripts/compare_stats.py        # 对比采集脚本和 Claude Code /stats 缓存的统计结果
 ```
 
 ## 许可证

@@ -1,4 +1,5 @@
-# Sets when tokenboard collects and redeploys (Windows Task Scheduler).
+# Sets when tokenboard collects new usage (Windows Task Scheduler). With Notion storage the task only
+# syncs to Notion (sync.ps1); with the JSON file it rebuilds and redeploys the site (deploy.ps1).
 #   .\schedule.ps1 -At 21:30            daily at 21:30
 #   .\schedule.ps1 -At 08:00,20:00      twice a day
 #   .\schedule.ps1                      show the current schedule
@@ -29,7 +30,9 @@ $triggers = foreach ($t in $At) {
     $time = [datetime]::ParseExact($t, 'HH:mm', [Globalization.CultureInfo]::InvariantCulture)
     New-ScheduledTaskTrigger -Daily -At $time
 }
-$script = Join-Path $PSScriptRoot 'deploy.ps1'
+$config = Join-Path (Split-Path -Parent $PSScriptRoot) 'tokenboard.config.json'
+$storage = if (Test-Path $config) { (Get-Content $config -Raw | ConvertFrom-Json).storage } else { 'json' }
+$script = Join-Path $PSScriptRoot ($(if ($storage -eq 'notion') { 'sync.ps1' } else { 'deploy.ps1' }))
 $action = New-ScheduledTaskAction -Execute 'pwsh.exe' -Argument "-NoProfile -NonInteractive -WindowStyle Hidden -File `"$script`""
 # A run missed while the computer was off or asleep starts as soon as it is available again.
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 20)

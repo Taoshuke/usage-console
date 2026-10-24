@@ -8,6 +8,7 @@ fallback data, and copies the demo data to public/data/usage.json unless real da
     python3 scripts/build.py            # build public/
     python3 scripts/build.py --preview  # also write public/preview.html, the bare fragment
 """
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -29,6 +30,13 @@ img{{max-width:100%}}
 """
 
 
+def storage():
+    config = ROOT / "tokenboard.config.json"
+    if not config.exists():
+        return "json"
+    return json.loads(config.read_text(encoding="utf-8")).get("storage", "json")
+
+
 def main():
     page = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
     demo = (ROOT / "demo" / "usage.json").read_text(encoding="utf-8")
@@ -46,7 +54,10 @@ def main():
         (out / "preview.html").write_text(fragment, encoding="utf-8")
     shutil.copyfile(ROOT / "web" / "_headers", out / "_headers")
     data = out / "data" / "usage.json"
-    if not data.exists():
+    if storage() == "notion":
+        # The Worker serves data/usage.json from Notion; a file here would shadow it.
+        data.unlink(missing_ok=True)
+    elif not data.exists():
         shutil.copyfile(ROOT / "demo" / "usage.json", data)
     print(f"built {out / 'index.html'}")
 

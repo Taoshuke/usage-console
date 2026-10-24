@@ -1,17 +1,25 @@
 {
   // Copy to wrangler.jsonc and fill in your own names. wrangler.jsonc is git-ignored.
-  // The dashboard is static files only; protect it with Cloudflare Access (see docs/deploy.md).
+  // Static files plus a small script for Notion storage; protect the domain with Cloudflare Access (docs/deploy.md).
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "tokenboard",
   "compatibility_date": "2026-10-01",
+  // The script only answers data/usage.json from Notion; everything else is a static file.
+  "main": "src/worker.js",
   "assets": {
     "directory": "./public",
+    "binding": "ASSETS",
     "html_handling": "drop-trailing-slash",
     "not_found_handling": "none"
   },
   "routes": [
     { "pattern": "usage.example.com", "custom_domain": true }
   ],
+  // Notion storage only (docs/notion.md). The token is a secret: npx wrangler secret put NOTION_TOKEN
+  "vars": {
+    "NOTION_USAGE_DB": "",
+    "NOTION_SETTINGS_DB": ""
+  },
   // Serve only on the custom domain: workers.dev and preview URLs are not covered by Access.
   "workers_dev": false,
   "preview_urls": false

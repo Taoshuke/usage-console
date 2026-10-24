@@ -1,7 +1,9 @@
-"""tokenboard collector: runs the enabled source adapters and writes the dashboard's data file.
+"""tokenboard collector: runs the enabled source adapters and stores the dashboard's data.
 
     python3 collector/collect.py                      # uses tokenboard.config.json, writes public/data/usage.json
     python3 collector/collect.py --config my.json --out somewhere/usage.json
+
+With "storage": "notion" in the config the data goes to Notion instead of a file (see docs/notion.md).
 """
 import argparse
 import json
@@ -13,6 +15,7 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sources import ADAPTERS  # noqa: E402
+from sinks import notion  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -64,6 +67,9 @@ def main(argv=None):
         "punch": punch,
         "rows": sorted(rows, key=lambda r: (r["d"], r["src"], r["model"])),
     }
+    if config.get("storage", "json") == "notion":
+        notion.push(data, config["notion"], log=lambda m: print(m, file=sys.stderr))
+        return
     args.out.parent.mkdir(parents=True, exist_ok=True)
     tmp = args.out.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")

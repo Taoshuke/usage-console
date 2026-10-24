@@ -1,9 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Usage Console</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
 <style>
 /* Layout: sticky control bar (source + range), then one hero line (the number and what it is made of),
    a KPI strip, quotas, the daily chart, month blocks, a breakdown table and hours. Dark only; terminal
@@ -622,3 +635,6 @@ footer code{font-family:var(--mono);color:var(--fg-2)}
     .catch(err => { $('status').textContent = '数据没有读到（' + err.message + '），稍后刷新页面再试。'; });
 })();
 </script>
+
+</body>
+</html>

@@ -1,4 +1,5 @@
 <title>tokenboard</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='tbg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237C80F8'/%3E%3Cstop offset='1' stop-color='%234338CA'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url%28%23tbg%29'/%3E%3Crect x='7' y='7' width='8.2' height='8.2' rx='2.6' fill='%23fff' fill-opacity='.38'/%3E%3Crect x='16.8' y='7' width='8.2' height='8.2' rx='2.6' fill='%23fff' fill-opacity='.66'/%3E%3Crect x='7' y='16.8' width='8.2' height='8.2' rx='2.6' fill='%23fff' fill-opacity='.66'/%3E%3Crect x='16.8' y='16.8' width='8.2' height='8.2' rx='2.6' fill='%23fff'/%3E%3C/svg%3E">
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="light dark">
@@ -64,7 +65,9 @@ svg text{fill:var(--text-3);font:11px var(--mono)}
   -webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid transparent;transition:border-color .2s}
 .top.stuck{border-bottom-color:var(--border)}
 .top-in{max-width:1180px;margin:0 auto;min-height:60px;display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;padding-block:10px}
-.brand{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.01em;font-size:15px;margin-right:6px;white-space:nowrap}
+.brand{display:flex;align-items:center;gap:10px;margin-right:6px;white-space:nowrap}
+.wordmark{font-size:16px;font-weight:600;letter-spacing:-.03em}
+.wordmark span{color:var(--text-3)}
 .brand svg{flex:none}
 .seg{min-width:0;display:inline-flex;padding:3px;gap:2px;border-radius:var(--r-md);background:var(--sunken);border:1px solid var(--border-soft);max-width:100%;overflow-x:auto;scrollbar-width:none}
 .seg::-webkit-scrollbar{display:none}
@@ -187,7 +190,9 @@ svg text{fill:var(--text-3);font:11px var(--mono)}
 .bar .tr span{display:block;height:100%;border-radius:999px}
 .bar em{font-style:normal;color:var(--text-3);font-size:12.5px;min-width:44px;text-align:right}
 .tbl .cost{font-weight:600}
-.tag{font-family:var(--mono);font-size:10.5px;color:var(--text-3);margin-left:5px;font-weight:400}
+.tag{display:inline-block;font-family:var(--mono);font-size:10.5px;line-height:16px;padding:0 5px;border:1px solid var(--border);border-radius:5px;color:var(--text-3);font-weight:400;vertical-align:1px;letter-spacing:.02em}
+.cost .tag{margin-left:6px}
+.muted{color:var(--text-3);font-weight:400}
 .mcards{display:none;flex-direction:column}
 @media (max-width:700px){.tbl{display:none}.mcards{display:flex}}
 .mc{padding:12px 0;border-top:1px solid var(--border-soft);display:flex;flex-direction:column;gap:8px}
@@ -196,14 +201,17 @@ svg text{fill:var(--text-3);font:11px var(--mono)}
 .mc-parts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;font-size:12px;color:var(--text-3)}
 .mc-parts b{display:block;color:var(--text-2);font-weight:500;font-size:13px}
 
-details.about{font-size:13px;color:var(--text-2)}
-details.about summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:16px 22px;font-weight:500;color:var(--text)}
+details.about summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:18px 22px;font-size:14px;font-weight:600;color:var(--text)}
 details.about summary::-webkit-details-marker{display:none}
-details.about summary svg{transition:transform .2s;color:var(--text-3)}
+details.about summary svg{transition:transform .2s;color:var(--text-3);flex:none}
 details.about[open] summary svg{transform:rotate(90deg)}
-details.about .body{padding:0 22px 18px 44px;line-height:1.75;max-width:80ch}
-details.about .body p{margin:0 0 6px}
-details.about code{font-family:var(--mono);font-size:12px;background:var(--sunken);padding:1px 5px;border-radius:5px}
+.about-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--border-soft)}
+.ab{padding:18px 22px 22px;min-width:0}
+.ab + .ab{border-left:1px solid var(--border-soft)}
+.ab h3{margin:0 0 8px;font-size:12.5px;font-weight:500;color:var(--text-3)}
+.ab p{margin:0;font-size:13.5px;line-height:1.75;color:var(--text-2);text-wrap:pretty}
+.ab code{font-family:var(--mono);font-size:.94em;color:var(--text)}
+@media (max-width:760px){.about-grid{grid-template-columns:minmax(0,1fr)}.ab + .ab{border-left:0;border-top:1px solid var(--border-soft)}.ab{padding:16px}}
 footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--text-3);padding:4px 2px}
 footer a{color:var(--text-2);text-decoration:none}
 footer a:hover{color:var(--text);text-decoration:underline}
@@ -219,8 +227,8 @@ footer a:hover{color:var(--text);text-decoration:underline}
 <div class="top" id="top">
   <div class="top-in">
     <div class="brand">
-      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="6" fill="var(--text)"/><rect x="5.5" y="11" width="2.6" height="5.5" rx="1.3" fill="var(--bg)"/><rect x="9.7" y="7.5" width="2.6" height="9" rx="1.3" fill="var(--bg)"/><rect x="13.9" y="5" width="2.6" height="11.5" rx="1.3" fill="var(--accent)"/></svg>
-      <span id="brandName">tokenboard</span>
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="tbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C80F8"/><stop offset="1" stop-color="#4338CA"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#tbg)"/><rect x="7" y="7" width="8.2" height="8.2" rx="2.6" fill="#fff" fill-opacity=".38"/><rect x="16.8" y="7" width="8.2" height="8.2" rx="2.6" fill="#fff" fill-opacity=".66"/><rect x="7" y="16.8" width="8.2" height="8.2" rx="2.6" fill="#fff" fill-opacity=".66"/><rect x="16.8" y="16.8" width="8.2" height="8.2" rx="2.6" fill="#fff"/></svg>
+      <span class="wordmark">token<span>board</span></span>
     </div>
     <div class="seg src" id="srcSeg" role="group"></div>
     <div class="seg rng" id="rngSeg" role="group">
@@ -298,7 +306,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
 
   <details class="card about" id="about">
     <summary><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="aboutTitle"></span></summary>
-    <div class="body" id="aboutBody"></div>
+    <div class="about-grid" id="aboutBody"></div>
   </details>
 
   <footer><span id="footLeft"></span><a href="https://github.com/Taoshuke/tokenboard" target="_blank" rel="noopener">GitHub</a></footer>
@@ -333,9 +341,11 @@ footer a:hover{color:var(--text);text-decoration:underline}
       rhythm: 'Weekly rhythm', peak: 'Peak {h}', messages: '{n} messages', hoverSlot: '{n} messages in total · hover or tap a slot',
       breakdown: 'Models', modelsCount: '{n} models', model: 'Model', share: 'Share', input: 'Input', output: 'Output', cacheRead: 'Cache read', cacheWrite: 'Cache write',
       about: 'About this data', other: 'Other models',
-      about1: 'Log sources are read by a local collector (for Claude Code, from <code>~/.claude/projects</code>). Tokens include subagents and each reply is counted once, so totals differ from <code>/stats</code>.',
-      about2: 'Costs marked <code>est</code> are estimated from per-token prices; <code>actual</code> amounts come from the provider\'s billing.',
-      about3: 'Days and hours use the {tz} time zone.',
+      aboutSrc: 'Sources', aboutCost: 'Cost', aboutTime: 'Time',
+      about1: 'A local collector reads each tool\'s logs; for Claude Code that is <code>~/.claude/projects</code>. Tokens include subagents and every reply counts once, so totals can differ from <code>/stats</code>.',
+      about2: '{est} is estimated from per-token prices, {actual} comes from the provider\'s bill. Models without a price are left out of the cost total.',
+      about3: 'Days and hours follow {tz}. Last updated {t}.',
+      noPrice: 'No price for this model', unpriced: '{n} model(s) without a price are not counted',
       updated: 'Updated {t}', stale: 'Data is {n} days old',
       wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], wdShort: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
     },
@@ -355,9 +365,11 @@ footer a:hover{color:var(--text);text-decoration:underline}
       rhythm: '每周节律', peak: '高峰 {h}', messages: '{n} 条消息', hoverSlot: '共 {n} 条消息，悬停或点按查看某个时段',
       breakdown: '模型明细', modelsCount: '{n} 个模型', model: '模型', share: '占比', input: '输入', output: '输出', cacheRead: '缓存读取', cacheWrite: '缓存写入',
       about: '关于这些数据', other: '其他模型',
-      about1: '会话记录类来源由本机采集脚本读取，例如 Claude Code 读取 <code>~/.claude/projects</code>。token 含子代理，同一条回复只计一次，所以总数和 <code>/stats</code> 不同。',
-      about2: '标 <code>est</code> 的费用按单价估算，标 <code>actual</code> 的是平台账单金额。',
-      about3: '日期与钟点按 {tz} 时区划分。',
+      aboutSrc: '数据来源', aboutCost: '费用', aboutTime: '时间',
+      about1: '本机采集脚本读取各工具的会话记录，Claude Code 读的是 <code>~/.claude/projects</code>。token 含子代理，每条回复只计一次，所以总数可能和 <code>/stats</code> 不同。',
+      about2: '{est} 按单价估算，{actual} 来自平台账单。没有单价的模型不计入费用，费用栏留空。',
+      about3: '日期和钟点按 {tz} 划分，最近一次更新在 {t}。',
+      noPrice: '没有这个模型的单价', unpriced: '{n} 个模型没有单价，未计入',
       updated: '更新于 {t}', stale: '数据已过期 {n} 天',
       wd: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'], wdShort: ['一', '二', '三', '四', '五', '六', '日'],
     },
@@ -409,14 +421,16 @@ footer a:hover{color:var(--text);text-decoration:underline}
   function rowCost(r) {
     if (r.cost != null) return r.cost;
     const p = (data.prices && data.prices.per_mtok || {})[r.model];
-    return p ? ((r.in || 0) * p[0] + (r.out || 0) * p[1] + (r.cr || 0) * p[2] + (r.cw || 0) * p[3]) / 1e6 : 0;
+    return p ? ((r.in || 0) * p[0] + (r.out || 0) * p[1] + (r.cr || 0) * p[2] + (r.cw || 0) * p[3]) / 1e6 : null;
   }
-  const val = (r) => state.metric === 'cost' ? rowCost(r) : rowTok(r);
+  const val = (r) => state.metric === 'cost' ? rowCost(r) || 0 : rowTok(r);
   const fmt = (n, full) => state.metric === 'cost' ? money(n, full) : tok(n);
   const srcName = (id) => (data.sources.find(s => s.id === id) || {name: id}).name;
-  const gKey = (r) => state.src === 'all' ? r.src : r.model;
-  const gName = (g) => state.src === 'all' ? srcName(g) : modelName(g);
-  const gColor = (g) => state.src === 'all' ? srcColor[g] : modelColor[g] || 'var(--s7)';
+  // With one source there is nothing to compare across sources, so group by model instead.
+  const bySource = () => state.src === 'all' && data.sources.length > 1;
+  const gKey = (r) => bySource() ? r.src : r.model;
+  const gName = (g) => bySource() ? srcName(g) : modelName(g);
+  const gColor = (g) => bySource() ? srcColor[g] : modelColor[g] || 'var(--s7)';
   const today = () => D(data.generated.slice(0, 10));
 
   function view() {
@@ -477,7 +491,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
     const ramp = $('ramp'); ramp.replaceChildren(t('less')); for (let i = 0; i < 5; i++) { const x = E('i'); x.style.background = `var(--h${i})`; ramp.appendChild(x); } ramp.append(t('more'));
     document.querySelectorAll('#rngSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.r === state.range)));
     document.querySelectorAll('#metricSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === state.metric)));
-    const seg = $('srcSeg'); seg.replaceChildren();
+    const seg = $('srcSeg'); seg.replaceChildren(); seg.hidden = data.sources.length < 2;
     [{id: 'all', name: t('allSources')}].concat(data.sources).forEach(s => {
       const b = E('button'); b.type = 'button'; b.id = 'src-' + s.id;
       if (s.id !== 'all') { const d = E('i', 'dot'); d.style.background = srcColor[s.id]; b.appendChild(d); }
@@ -493,11 +507,13 @@ footer a:hover{color:var(--text);text-decoration:underline}
     $('noticeText').textContent = notes.join(' ');
     $('noticeClose').setAttribute('aria-label', lang === 'zh' ? '关闭提示' : 'Dismiss');
     $('noticeClose').onclick = () => { store.set('dismissed', noticeKey); $('notice').hidden = true; };
-    const ab = $('aboutBody'); ab.innerHTML = '';
-    ['about1', 'about2'].forEach(k => { const p = E('p'); p.innerHTML = t(k); ab.appendChild(p); });
-    ab.appendChild(E('p', null, t('about3', {tz: data.timezone || 'UTC'})));
     const gen = new Date(data.generated), age = (Date.now() - gen) / 864e5;
     const when = gen.toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US', {timeZone: data.timezone, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false});
+    const ab = $('aboutBody'); ab.replaceChildren();
+    const tagHtml = (k) => '<span class="tag">' + t(k) + '</span>';
+    [['aboutSrc', t('about1')], ['aboutCost', t('about2', {est: tagHtml('est'), actual: tagHtml('actual')})],
+     ['aboutTime', t('about3', {tz: '<code>' + (data.timezone || 'UTC') + '</code>', t: when})]].forEach(([h, html]) => {
+      const c = E('div', 'ab'), p = E('p'); p.innerHTML = html; c.append(E('h3', null, t(h)), p); ab.appendChild(c); });
     $('footLeft').textContent = (age > 2 && !data.demo ? t('stale', {n: Math.floor(age)}) + ' · ' : '') + t('updated', {t: when});
   }
 
@@ -516,6 +532,8 @@ footer a:hover{color:var(--text);text-decoration:underline}
     meta.appendChild(E('span', null, t('perDay', {v: fmt(v.total / span)})));
     meta.appendChild(E('span', null, dateFmt(v.start) + ' – ' + dateFmt(v.last)));
     if (v.kind) meta.appendChild(E('span', 'pill est', v.kind));
+    if (state.metric === 'cost') { const np = new Set(v.inR.filter(r => rowCost(r) == null).map(r => r.src + '|' + r.model)).size;
+      if (np) meta.appendChild(E('span', 'pill', t('unpriced', {n: np}))); }
 
     const box = $('spark'); box.replaceChildren();
     const s0 = state.range === 'all' && v.byDay.size ? D(denseStart([...v.byDay.keys()])) : v.start;
@@ -532,7 +550,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
     S('path', {d: d + `L${W},${H}L0,${H}Z`, fill: `url(#${gid})`}, svg);
     S('path', {d, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke'}, svg);
 
-    $('compLabel').textContent = state.src === 'all' ? t('bySource') : t('byModel');
+    $('compLabel').textContent = bySource() ? t('bySource') : t('byModel');
     const st = $('stack'), comp = $('comp'); st.replaceChildren(); comp.replaceChildren();
     if (!v.total) { comp.appendChild(E('div', 'empty', t('none'))); return; }
     v.order.forEach(k => {
@@ -730,20 +748,22 @@ footer a:hover{color:var(--text);text-decoration:underline}
   /* ---------- model table ---------- */
   function renderTable(v) {
     const by = {};
-    v.inR.forEach(r => { const k = r.src + '|' + r.model, o = by[k] || (by[k] = {src: r.src, model: r.model, in: 0, out: 0, cr: 0, cw: 0, cost: 0, est: false});
-      o.in += r.in || 0; o.out += r.out || 0; o.cr += r.cr || 0; o.cw += r.cw || 0; o.cost += rowCost(r); if (r.cost == null) o.est = true; });
+    v.inR.forEach(r => { const k = r.src + '|' + r.model, o = by[k] || (by[k] = {src: r.src, model: r.model, in: 0, out: 0, cr: 0, cw: 0, cost: 0, est: false, priced: false});
+      const c = rowCost(r); o.in += r.in || 0; o.out += r.out || 0; o.cr += r.cr || 0; o.cw += r.cw || 0;
+      if (c != null) { o.cost += c; o.priced = true; if (r.cost == null) o.est = true; } });
     const list = Object.values(by).map(o => ({...o, v: state.metric === 'cost' ? o.cost : o.in + o.out + o.cr + o.cw})).sort((a, b) => b.v - a.v);
     $('tblSub').textContent = t('modelsCount', {n: list.length});
     const tb = $('tbl'), mc = $('mcards'); tb.replaceChildren(); mc.replaceChildren();
     if (!list.length) { mc.appendChild(E('div', 'empty', t('none'))); return; }
-    const color = (o) => state.src === 'all' ? srcColor[o.src] : modelColor[o.model] || 'var(--s7)';
+    const color = (o) => bySource() ? srcColor[o.src] : modelColor[o.model] || 'var(--s7)';
     const thead = E('thead'), hr = E('tr');
     [[t('model'), ''], [t('share'), 'share'], [t('input'), ''], [t('output'), ''], [t('cacheRead'), ''], [t('cacheWrite'), ''], [t('cost'), '']].forEach(([n, c]) => { const th = E('th', c, n); th.scope = 'col'; hr.appendChild(th); });
     thead.appendChild(hr); tb.appendChild(thead);
     const body = E('tbody'), max = list[0].v || 1;
-    const nameCell = (o) => { const w = E('div', 'nm'), d = E('i', 'dot'), l = E('div', null, modelName(o.model)); d.style.background = color(o); l.appendChild(E('small', null, srcName(o.src))); w.append(d, l); return w; };
+    const nameCell = (o) => { const w = E('div', 'nm'), d = E('i', 'dot'), l = E('div', null, modelName(o.model)); d.style.background = color(o); if (data.sources.length > 1) l.appendChild(E('small', null, srcName(o.src))); w.append(d, l); return w; };
     const barEl = (o) => { const b = E('div', 'bar'), tr = E('div', 'tr'), f = E('span'); f.style.width = (o.v / max * 100) + '%'; f.style.background = color(o); tr.appendChild(f); b.append(tr, E('em', null, pct(o.v / (v.total || 1)))); return b; };
-    const costEl = (o, tag) => { const s = E(tag, 'cost', money(o.cost)); if (o.est) s.appendChild(E('span', 'tag', t('est'))); return s; };
+    const costEl = (o, tag) => { if (!o.priced) { const s = E(tag, 'cost muted', '—'); s.title = t('noPrice'); return s; }
+      const s = E(tag, 'cost', money(o.cost)); if (o.est) s.appendChild(E('span', 'tag', t('est'))); return s; };
     list.forEach(o => {
       const tr = E('tr'), c1 = E('td'), c2 = E('td', 'share'); c1.appendChild(nameCell(o)); c2.appendChild(barEl(o));
       tr.append(c1, c2, E('td', null, tok(o.in)), E('td', null, tok(o.out)), E('td', null, o.cr ? tok(o.cr) : '—'), E('td', null, o.cw ? tok(o.cw) : '—'), costEl(o, 'td'));

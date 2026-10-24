@@ -1,13 +1,14 @@
 """Notion storage for tokenboard.
 
-Two databases hold the data:
-- usage: one page per day, source and model, titled "date|source|model", with the token counts as numbers
-- settings: one page per key (sources, prices, quotas, punch, ...), the value stored as JSON text
+One database holds the data:
+- usage rows: one page per day, source and model, titled "date|source|model", with the token counts as numbers
+- settings rows: one page per key, titled "@key" (sources, prices, quotas, punch, ...), the value as JSON text
+  in the Value column; they have no date, so a view filtered on "Date is not empty" shows only usage
 
 The collector upserts into them; the Worker in src/worker.js reads them back. Rows that the collector no
 longer sees (for example days whose local logs were cleaned up) are left alone, so Notion keeps the history.
 
-    python3 collector/sinks/notion.py init PARENT_PAGE_ID   # create both databases under a page
+    python3 collector/sinks/notion.py init PARENT_PAGE_ID   # create the database under a page
 """
 import json
 import os
@@ -98,12 +99,16 @@ def push(data, options, log=print):
     token = os.environ.get("NOTION_TOKEN")
     if not token:
         sys.exit("NOTION_TOKEN is not set; create an internal integration and export its token")
-    usage_db, settings_db = options["usage_database"], options["settings_database"]
+    db = options["database"]
 
-    existing = {}
-    for page in query_all(token, usage_db):
+    existing, settings = {}, {}
+    for page in query_all(token, db):
+        title = plain(page["properties"]["Key"]["title"])
+        if title.startswith("@"):
+            settings[title[1:]] = (page["id"], plain(page["properties"].get("Value", {}).get("rich_text")))
+            continue
         try:
-            existing[plain(page["properties"]["Key"]["title"])] = (page["id"], comparable(page_row(page)))
+            existing[title] = (page["id"], comparable(page_row(page)))
         except (KeyError, ValueError):
             continue  # a row someone typed by hand; leave it
     created = updated = 0
@@ -116,12 +121,10 @@ def push(data, options, log=print):
             call(token, "PATCH", f"/pages/{page_id}", {"properties": row_props(row)})
             updated += 1
         else:
-            call(token, "POST", "/pages", {"parent": {"database_id": usage_db}, "properties": row_props(row)})
+            call(token, "POST", "/pages", {"parent": {"database_id": db}, "properties": row_props(row)})
             created += 1
         time.sleep(WRITE_PAUSE)
 
-    settings = {plain(p["properties"]["Key"]["title"]): (p["id"], plain(p["properties"]["Value"]["rich_text"]))
-                for p in query_all(token, settings_db)}
     if "sources" in settings:  # keep sources other collectors registered earlier
         try:
             known = {s["id"]: s for s in json.loads(settings["sources"][1])}
@@ -131,13 +134,13 @@ def push(data, options, log=print):
             pass
     for key in SETTINGS:
         value = json.dumps(data.get(key), ensure_ascii=False, separators=(",", ":"))
-        props = {"Key": {"title": chunks(key)}, "Value": {"rich_text": chunks(value)}}
+        props = {"Key": {"title": chunks("@" + key)}, "Value": {"rich_text": chunks(value)}}
         if key in settings:
             if settings[key][1] == value:
                 continue
             call(token, "PATCH", f"/pages/{settings[key][0]}", {"properties": props})
         else:
-            call(token, "POST", "/pages", {"parent": {"database_id": settings_db}, "properties": props})
+            call(token, "POST", "/pages", {"parent": {"database_id": db}, "properties": props})
         time.sleep(WRITE_PAUSE)
     log(f"notion: {created} rows created, {updated} updated, {len(data['rows']) - created - updated} unchanged")
 
@@ -147,17 +150,13 @@ def init(parent_page_id):
     if not token:
         sys.exit("NOTION_TOKEN is not set")
     num = {"number": {"format": "number"}}
-    usage = call(token, "POST", "/databases", {
+    db = call(token, "POST", "/databases", {
         "parent": {"type": "page_id", "page_id": parent_page_id},
-        "title": [{"type": "text", "text": {"content": "tokenboard usage"}}],
+        "title": [{"type": "text", "text": {"content": "tokenboard"}}],
         "properties": {"Key": {"title": {}}, "Date": {"date": {}}, "Source": {"select": {}}, "Model": {"rich_text": {}},
                        "Input": num, "Output": num, "Cache read": num, "Cache write": num, "Sessions": num,
-                       "Requests": num, "Cost": {"number": {"format": "dollar"}}}})
-    settings = call(token, "POST", "/databases", {
-        "parent": {"type": "page_id", "page_id": parent_page_id},
-        "title": [{"type": "text", "text": {"content": "tokenboard settings"}}],
-        "properties": {"Key": {"title": {}}, "Value": {"rich_text": {}}}})
-    print(json.dumps({"usage_database": usage["id"], "settings_database": settings["id"]}, indent=2))
+                       "Requests": num, "Cost": {"number": {"format": "dollar"}}, "Value": {"rich_text": {}}}})
+    print(json.dumps({"database": db["id"]}, indent=2))
 
 
 if __name__ == "__main__":

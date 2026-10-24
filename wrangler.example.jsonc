@@ -17,8 +17,7 @@
   ],
   // Notion storage only (docs/notion.md). The token is a secret: npx wrangler secret put NOTION_TOKEN
   "vars": {
-    "NOTION_USAGE_DB": "",
-    "NOTION_SETTINGS_DB": ""
+    "NOTION_DB": ""
   },
   // Serve only on the custom domain: workers.dev and preview URLs are not covered by Access.
   "workers_dev": false,

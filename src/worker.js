@@ -53,16 +53,15 @@ async function queryAll(env, databaseId) {
 const plain = (rich) => (rich || []).map(t => t.plain_text || '').join('');
 
 async function fromNotion(env) {
-  const [usagePages, settingPages] = await Promise.all([
-    queryAll(env, env.NOTION_USAGE_DB), queryAll(env, env.NOTION_SETTINGS_DB)]);
-  const settings = {};
-  for (const p of settingPages) {
-    const k = plain(p.properties.Key.title), v = plain(p.properties.Value.rich_text);
-    try { settings[k] = JSON.parse(v); } catch { /* skip a value someone edited by hand */ }
-  }
-  const rows = [];
-  for (const p of usagePages) {
-    const parts = plain(p.properties.Key.title).split('|');
+  // Usage rows are titled date|source|model; settings rows are titled @key and carry JSON in Value.
+  const settings = {}, rows = [];
+  for (const p of await queryAll(env, env.NOTION_DB)) {
+    const title = plain(p.properties.Key.title);
+    if (title.startsWith('@')) {
+      try { settings[title.slice(1)] = JSON.parse(plain(p.properties.Value && p.properties.Value.rich_text)); } catch { /* skip a hand-edited value */ }
+      continue;
+    }
+    const parts = title.split('|');
     if (parts.length < 3) continue;
     const row = {d: parts[0], src: parts[1], model: parts.slice(2).join('|')};
     for (const [k, name] of NUMBERS) {

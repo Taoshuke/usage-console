@@ -8,6 +8,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "collector"))
 from sinks import notion  # noqa: E402
 
 
+def plain_key(body):
+    return "".join(t["text"]["content"] for t in body["properties"]["Key"]["title"])
+
+
 def page(pid, props):
     return {"id": pid, "properties": props}
 
@@ -15,7 +19,7 @@ def page(pid, props):
 class FakeNotion:
     """Records writes; serves the usage and settings databases from memory."""
     def __init__(self, usage_pages, settings_pages):
-        self.db = {"U": usage_pages, "S": settings_pages}
+        self.db = {"U": usage_pages + settings_pages}
         self.writes = []
 
     def call(self, token, method, path, body=None):
@@ -35,7 +39,7 @@ class NotionSinkTest(unittest.TestCase):
                 "generated": "g", "timezone": "UTC", "currency": "USD", "prices": {}, "quotas": [], "longest_session": None, "punch": {}}
         with mock.patch.dict(os.environ, {"NOTION_TOKEN": "x"}), mock.patch.object(notion, "call", fake.call), \
                 mock.patch.object(notion, "query_all", fake.query_all), mock.patch.object(notion, "WRITE_PAUSE", 0):
-            notion.push(data, {"usage_database": "U", "settings_database": "S"}, log=lambda m: None)
+            notion.push(data, {"database": "U"}, log=lambda m: None)
 
     def test_round_trip_and_skip_unchanged(self):
         props = notion.row_props(ROW)
@@ -46,8 +50,17 @@ class NotionSinkTest(unittest.TestCase):
         self.assertEqual(notion.page_row(page("p1", stored)), ROW)
         fake = FakeNotion([page("p1", stored)], [])
         self.run_push(fake, [ROW])
-        usage_writes = [w for w in fake.writes if w[2] and w[2].get("parent", {}).get("database_id") == "U" or w[1] == "/pages/p1"]
+        usage_writes = [w for w in fake.writes if w[1] == "/pages/p1" or (w[2] and not plain_key(w[2]).startswith("@") and w[2].get("parent"))]
         self.assertEqual(usage_writes, [])
+
+    def test_settings_rows_are_written_with_an_at_prefix_and_skipped_when_unchanged(self):
+        stored = page("s1", {"Key": {"title": [{"plain_text": "@timezone"}]}, "Value": {"rich_text": [{"plain_text": '"UTC"'}]}})
+        fake = FakeNotion([], [stored])
+        self.run_push(fake, [])
+        keys = [plain_key(b) for m, p, b in fake.writes if b]
+        self.assertIn("@currency", keys)
+        self.assertNotIn("@timezone", keys)  # same value as stored, so no write
+        self.assertTrue(all(k.startswith("@") for k in keys))
 
     def test_creates_new_rows_updates_changed_and_keeps_missing(self):
         old = notion.row_props({**ROW, "out": 1})
@@ -56,7 +69,7 @@ class NotionSinkTest(unittest.TestCase):
         fake = FakeNotion([page("p1", stored), page("p2", gone)], [])
         new_row = {**ROW, "d": "2026-10-08"}
         self.run_push(fake, [ROW, new_row])
-        methods = [(m, p) for m, p, b in fake.writes if p == "/pages/p1" or (b and b.get("parent", {}).get("database_id") == "U")]
+        methods = [(m, p) for m, p, b in fake.writes if p == "/pages/p1" or (b and b.get("parent") and not plain_key(b).startswith("@"))]
         self.assertEqual(methods, [("PATCH", "/pages/p1"), ("POST", "/pages")])
         self.assertFalse(any(p == "/pages/p2" for _, p, _ in fake.writes))
 

@@ -89,6 +89,16 @@ class ClaudeCodeTest(unittest.TestCase):
         self.assertEqual(out["longest_session"], {"src": "claude-code", "ms": 7200000, "start": "2026-02-21"})
         self.assertEqual(out["complete_through"], "2026-10-07")
 
+    def test_fit_keeps_daily_totals_and_matches_the_model_totals(self):
+        rows = [{"in": 10, "out": 10, "cr": 70, "cw": 10, "cw1h": 5},   # 100
+                {"in": 0, "out": 50, "cr": 250, "cw": 0}]               # 300; the logs saw no cache writes here
+        claude_code.fit(rows, {"in": 20, "out": 120, "cr": 240, "cw": 20})
+        tot = lambda r: r["in"] + r["out"] + r["cr"] + r["cw"]
+        self.assertEqual([tot(r) for r in rows], [100, 300])
+        for k, want in (("in", 20), ("out", 120), ("cr", 240), ("cw", 20)):
+            self.assertAlmostEqual(sum(r[k] for r in rows), want, delta=1)
+        self.assertLessEqual(rows[0]["cw1h"], rows[0]["cw"])
+
 
 if __name__ == "__main__":
     unittest.main()

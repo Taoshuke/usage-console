@@ -3,8 +3,8 @@
 Days the cache has computed (~/.claude/stats-cache.json, through its lastComputedDate) take its numbers, so
 tokens, messages and sessions match /stats exactly:
 - each model's daily tokens come from the cache; they are split into input, output, cache read and cache
-  write in the proportions the logs show for that day and model, or the model's all-time proportions when
-  the logs for that day are gone
+  write so that every day keeps its cached total and the model's four parts add up to the totals /stats
+  shows for it, starting from the proportions the logs show for that day (see fit)
 - the share of cache writes that went to the 1-hour cache follows the logs for that day and model
 - the day's messages and sessions come from the cache and go to the row of the day's busiest model; a day
   with activity but no token record is put under the "unrecorded_model" option ("unknown" by default)
@@ -69,6 +69,39 @@ def split(total, weights):
     return dict(zip(keys, parts))
 
 
+def fit(rows, targets, rounds=200):
+    """Rescales the rows' four parts (iterative proportional fitting) so that each row keeps its total and the
+    parts summed over the rows match targets, scaled to the rows' grand total. Rows keep their own shape where
+    the targets allow it."""
+    keys = [k for k, _ in PARTS]
+    totals = [sum(r[k] for k in keys) for r in rows]
+    grand, want = sum(totals), [max(targets.get(k, 0), 0) for k in keys]
+    if not grand or not sum(want):
+        return
+    want = [w * grand / sum(want) for w in want]
+    mix = [w / grand for w in want]
+    # a part the logs never saw still needs a little room to grow into
+    m = [[(r[k] or 0) * 0.999 + t * mix[i] * 0.001 for i, k in enumerate(keys)] for r, t in zip(rows, totals)]
+    for _ in range(rounds):
+        for i in range(4):
+            col = sum(row[i] for row in m)
+            if col:
+                for row in m:
+                    row[i] *= want[i] / col
+        for row, t in zip(m, totals):
+            have = sum(row)
+            if have:
+                row[:] = [x * t / have for x in row]
+    for r, row, t in zip(rows, m, totals):
+        parts = [int(x) for x in row]
+        for i in sorted(range(4), key=lambda i: row[i] - parts[i], reverse=True)[:t - sum(parts)]:
+            parts[i] += 1
+        cw = r["cw"]
+        r.update(zip(keys, parts))
+        if r.get("cw1h"):
+            r["cw1h"] = min(r["cw"], round(r["cw"] * r["cw1h"] / cw)) if cw else 0
+
+
 def from_cache(cache, log_rows, unrecorded_model="unknown"):
     """Rows for the days the cache covers; log rows only lend their token proportions."""
     logged = {(r["d"], r["model"]): r for r in log_rows}
@@ -94,6 +127,8 @@ def from_cache(cache, log_rows, unrecorded_model="unknown"):
             if messages:
                 top["messages"] = messages
         rows += day_rows
+    for model, targets in cache["mix"].items():
+        fit([r for r in rows if r["model"] == model], targets)
     return rows
 
 

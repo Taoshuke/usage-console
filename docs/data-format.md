@@ -8,7 +8,7 @@ The page reads `data/usage.json` next to `index.html`. Version 1:
   "generated": "2026-10-24T08:30:00-07:00",   // ISO time with offset
   "timezone": "America/Los_Angeles",          // IANA zone used to split days and hours
   "currency": "USD",
-  "demo": false,                              // true shows the demo notice
+  "demo": false,                              // true shows the sample-data notice
   "sources": [{ "id": "claude-code", "name": "Claude Code", "kind": "logs" }],   // kind: logs | billing
   "prices": {                                 // USD per million tokens: input, output, cache read, cache write
     "verified": false,                        // false shows the "placeholder prices" notice
@@ -21,7 +21,7 @@ The page reads `data/usage.json` next to `index.html`. Version 1:
       "requests": 0,          // optional: API requests (billing sources)
       "cost": 12.34 }         // optional: actual billed amount; when absent, cost is estimated from prices
   ],
-  "quotas": [                 // optional plan limits
+  "quotas": [                 // optional usage limits
     { "src": "claude-code", "name": "Max plan", "window": "7d", "used": 0.68, "resets": "2026-10-27T09:00:00-07:00" }
   ],
   "punch": { "claude-code": [[0, 0, "... 24 hourly counts ..."], "... 7 rows, Monday first ..."] },

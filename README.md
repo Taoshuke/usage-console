@@ -1,6 +1,6 @@
 # tokenboard
 
-A private, self-hosted dashboard for your AI usage: tokens, estimated spend, sessions and plan limits across
+A private, self-hosted dashboard for your AI usage: tokens, estimated cost, sessions and usage limits across
 Claude Code and other tools, in one page. Light and dark themes, English and Chinese.
 
 [中文说明](README.zh-CN.md)
@@ -11,9 +11,9 @@ Claude Code and other tools, in one page. Light and dark themes, English and Chi
 
 - **One number up top**: spend or tokens for the period, with the change against the previous period.
 - **Breakdown by source and by model**, with input, output and cache tokens kept apart.
-- **Daily chart** with a 7-day average; outlier days are capped so the rest stay readable.
-- **Calendar and weekly rhythm**: which days and hours you actually work.
-- **Plan limits** as progress bars with reset times.
+- **Daily chart** with a 7-day moving average; outlier days are capped so the rest stay readable.
+- **Activity heatmap and activity by hour**: which days and hours you actually work.
+- **Usage limits** as progress bars with reset times.
 - Works on phones: touch to scrub charts, cards instead of wide tables.
 
 The page is a single static HTML file. Your data is a JSON file next to it, produced by a collector that runs on
@@ -32,7 +32,7 @@ python3 scripts/build.py                                    # writes public/
 python3 -m http.server -d public 8000                       # open http://localhost:8000
 ```
 
-Without collected data the page shows built-in fictional demo data and says so.
+Without collected data the page shows built-in sample data and says so.
 
 ## Deploy
 
@@ -45,7 +45,7 @@ the repository. See [docs/deploy.md](docs/deploy.md).
 | Source | Status | Reads |
 | --- | --- | --- |
 | Claude Code | supported | session logs in `~/.claude/projects` |
-| Others (Codex CLI, API billing, plan limits) | planned | add an adapter, see below |
+| Others (Codex CLI, API billing, usage limits) | planned | add an adapter, see below |
 
 Adding a source means writing one module in `collector/sources/` that returns rows in the
 [data format](docs/data-format.md), and registering it in `collector/sources/__init__.py`.
@@ -55,13 +55,13 @@ Adding a source means writing one module in `collector/sources/` that returns ro
 Claude Code tokens include subagents, and a reply streamed over several log lines is counted once, so totals
 differ from Claude Code's own `/stats`. Costs from logs are estimates based on `prices.json`; the values shipped
 here are placeholders, so check your provider's current prices and set `"verified": true`. Billing sources can
-report actual amounts, which the page marks `actual`.
+report billed amounts, which the page marks `Billed`.
 
 ## Development
 
 ```bash
 python3 -m unittest discover -s tests   # collector tests
-python3 demo/generate.py                # regenerate demo data
+python3 demo/generate.py                # regenerate sample data
 python3 scripts/build.py --preview      # also writes public/preview.html, the bare page fragment
 ```
 

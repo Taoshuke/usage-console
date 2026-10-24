@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a calm single column. Top bar (sources, range, theme, language), then the headline number with
+/* Layout: a calm single column. Top bar (sources, theme, language), then the headline number with
    its sparkline and breakdown, a stat row, plan quotas, the daily chart, calendar + weekly rhythm,
    and the model table. Surfaces are quiet; colour is reserved for data. */
 :root{
@@ -161,11 +161,6 @@ body.failed .seg,body.failed #noticeClose,body.failed main>:not(.notice):not(foo
 .readout span{display:inline-flex;align-items:center;gap:6px}
 .readout em{font-style:normal;font-weight:600;color:var(--text)}
 .readout .ma{width:14px;height:0;border-top:2px solid color-mix(in srgb,var(--text) 70%,transparent);border-radius:2px}
-.kline{cursor:crosshair}
-.kline.panning{cursor:grabbing}
-.xh line{stroke:var(--text-2);stroke-width:1;stroke-dasharray:3 3}
-.xh rect{fill:var(--text)}
-.xh text{fill:var(--surface);font-weight:600}
 .nav{margin-top:12px}
 .nav svg{cursor:pointer}
 .nav .sel{cursor:grab}
@@ -269,10 +264,6 @@ footer a:hover{color:var(--text);text-decoration:underline}
     <div class="hero-main">
       <div class="hero-top">
         <span class="eyebrow" id="heroLabel"></span>
-        <div class="mini-seg" role="group" id="metricSeg">
-          <button type="button" id="m-cost" data-m="cost"></button>
-          <button type="button" id="m-tok" data-m="tok"></button>
-        </div>
       </div>
       <div class="big" id="big">—</div>
       <div class="hero-meta" id="heroMeta"></div>
@@ -294,7 +285,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
 
   <section class="card">
     <div class="card-h"><h2 id="dailyTitle"></h2><div class="card-tools"><div class="mini-seg" role="group" id="rangeSeg"></div><div class="mini-seg" role="group" id="granSeg"><button type="button" id="g-day" data-g="day"></button><button type="button" id="g-week" data-g="week"></button><button type="button" id="g-month" data-g="month"></button></div></div></div>
-    <div class="card-b"><div class="readout" id="readout"></div><div class="chart kline" id="daily"></div><div class="chart nav" id="nav"></div></div>
+    <div class="card-b"><div class="readout" id="readout"></div><div class="chart" id="daily"></div><div class="chart nav" id="nav"></div></div>
   </section>
 
   <div class="duo">
@@ -345,16 +336,16 @@ footer a:hover{color:var(--text);text-decoration:underline}
       demoNotice: 'Showing sample data. Run the collector to load your own usage.',
       loadFailed: 'Could not load usage data ({e}). Check the data source and reload the page.',
       pricesNotice: 'Model prices are placeholders and have not been verified; estimated costs are indicative only.',
-      cost: 'Cost', tokens: 'Tokens', spend: 'Estimated cost', tokUsed: 'Tokens used',
+      cost: 'Cost', tokens: 'Tokens', tokUsed: 'Tokens used',
       bySource: 'By source', byModel: 'By model', perDay: '{v} / day',
-      est: 'Est.', actual: 'Billed', mixed: 'Est. + billed',
+      est: 'Est.', actual: 'Billed',
       sessions: 'Sessions', perActive: '{v} per active day', requests: 'API requests', billingOnly: 'Billing sources only',
       activeDays: 'Active days', ofDays: '{p} of days', peakDay: 'Peak day', streak: 'Current streak', longest: 'Longest: {n} days',
       longestSession: 'Longest session', allTime: 'All time', days: 'd',
       quotas: 'Usage limits', resetsIn: 'Resets in {t}', reset: 'Reset', left: '{p} remaining', window5h: '5-hour', window7d: 'Weekly',
       daily: 'Daily usage', weekly: 'Weekly usage', monthly: 'Monthly usage', totalOf: '{v} total', gDay: 'Day', gWeek: 'Week', gMonth: 'Month', ariaGran: 'Granularity',
       ma_day: '7-day moving average', ma_week: '4-week moving average', ma_month: '3-month moving average',
-      r_1m: '1M', r_3m: '3M', r_6m: '6M', r_ytd: 'YTD', r_1y: '1Y', r_all: 'All', navigator: 'Time range navigator', chartHint: 'Scroll or pinch to zoom, drag to pan',
+      r_1m: '1M', r_3m: '3M', r_6m: '6M', r_ytd: 'YTD', r_1y: '1Y', r_all: 'All', navigator: 'Time range navigator',
       total: 'Total', noActivity: 'No activity', none: 'No data for this period',
       calendar: 'Activity heatmap', activeCount: '{n} active days', hidden: '{n} earlier day(s) not shown', less: 'Less', more: 'More', hoverDay: 'Hover or tap a day',
       rhythm: 'Activity by hour', peak: 'Peak hour {h}', messages: '{n} messages', hoverSlot: '{n} messages in total · hover or tap a slot',
@@ -364,26 +355,26 @@ footer a:hover{color:var(--text);text-decoration:underline}
       about1: 'A local collector reads each tool\'s data. For Claude Code, days that <code>/stats</code> has computed use its own numbers; later days are counted from <code>~/.claude/projects</code>.',
       about2: '{est} is estimated from per-token prices, {actual} comes from the provider\'s bill. Models without a price are left out of the cost total.',
       about3: 'Days and hours follow {tz}. Last updated {t}.',
-      noPrice: 'No price for this model', unpriced: '{n} model(s) without a price are not counted',
+      noPrice: 'No price for this model',
       updated: 'Updated {t}', stale: 'Last updated {n} days ago',
       wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], wdShort: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
-      ariaSrc: 'Source', ariaRange: 'Time range', ariaMetric: 'Metric',
+      ariaSrc: 'Source', ariaRange: 'Time range',
     },
     zh: {
       allSources: '全部来源', all: '全部', lang: 'EN', themeSystem: '跟随系统', themeLight: '浅色', themeDark: '深色',
       demoNotice: '当前显示示例数据。运行采集脚本后显示你的实际用量。',
       loadFailed: '用量数据读取失败（{e}）。请检查数据源后刷新页面。',
       pricesNotice: '模型单价是占位值，尚未核实，预估费用仅供参考。',
-      cost: '费用', tokens: 'Token', spend: '预估费用', tokUsed: 'Token 用量',
+      cost: '费用', tokens: 'Token', tokUsed: 'Token 用量',
       bySource: '按来源', byModel: '按模型', perDay: '日均 {v}',
-      est: '预估', actual: '实际', mixed: '预估 + 实际',
+      est: '预估', actual: '实际',
       sessions: '会话', perActive: '每活跃日 {v} 个', requests: 'API 请求', billingOnly: '仅计费类来源',
       activeDays: '活跃天数', ofDays: '占比 {p}', peakDay: '峰值日', streak: '当前连续活跃', longest: '最长连续 {n} 天',
       longestSession: '最长会话', allTime: '全部时间', days: '天',
       quotas: '用量限额', resetsIn: '{t}后重置', reset: '已重置', left: '剩余 {p}', window5h: '5 小时', window7d: '每周',
       daily: '每日用量', weekly: '每周用量', monthly: '每月用量', totalOf: '共 {v}', gDay: '日', gWeek: '周', gMonth: '月', ariaGran: '周期',
       ma_day: '7 日移动平均', ma_week: '4 周移动平均', ma_month: '3 个月移动平均',
-      r_1m: '近 1 月', r_3m: '近 3 月', r_6m: '近 6 月', r_ytd: '今年', r_1y: '近 1 年', r_all: '全部', navigator: '时间范围导航', chartHint: '滚轮或双指缩放，拖动平移',
+      r_1m: '近 1 月', r_3m: '近 3 月', r_6m: '近 6 月', r_ytd: '今年', r_1y: '近 1 年', r_all: '全部', navigator: '时间范围导航',
       total: '合计', noActivity: '无活动', none: '所选时段内无数据',
       calendar: '活动热力图', activeCount: '{n} 个活跃日', hidden: '更早的 {n} 天未显示', less: '少', more: '多', hoverDay: '悬停或点按查看单日数据',
       rhythm: '时段分布', peak: '峰值时段 {h}', messages: '{n} 条消息', hoverSlot: '共 {n} 条消息，悬停或点按查看某个时段',
@@ -393,10 +384,10 @@ footer a:hover{color:var(--text);text-decoration:underline}
       about1: '本机采集脚本读取各工具的数据。Claude Code 在 <code>/stats</code> 已计算的日期直接采用其统计数字，之后的日期从 <code>~/.claude/projects</code> 的会话记录统计。',
       about2: '{est} 按单价估算，{actual} 来自平台账单。没有单价的模型不计入费用，费用栏留空。',
       about3: '日期和钟点按 {tz} 划分，最近一次更新在 {t}。',
-      noPrice: '没有这个模型的单价', unpriced: '{n} 个模型没有单价，未计入',
+      noPrice: '没有这个模型的单价',
       updated: '更新于 {t}', stale: '数据已 {n} 天未更新',
       wd: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'], wdShort: ['一', '二', '三', '四', '五', '六', '日'],
-      ariaSrc: '来源', ariaRange: '时间范围', ariaMetric: '指标',
+      ariaSrc: '来源', ariaRange: '时间范围',
     },
   };
   let lang = store.get('lang') || ((navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en');
@@ -450,9 +441,9 @@ footer a:hover{color:var(--text);text-decoration:underline}
   }
 
   let data = null, srcColor = {}, modelColor = {};
-  // The page counts tokens; the cost/token switch only applies to the hero card. Both it and the chart start
-  // from their defaults on every visit.
-  const state = {src: store.get('src') || 'all', metric: 'tok', gran: 'auto'};
+  // The page counts tokens; cost only appears as a column of the model table. The chart starts from its
+  // defaults on every visit.
+  const state = {src: store.get('src') || 'all', gran: 'auto'};
 
   const rowTok = (r) => (r.in || 0) + (r.out || 0) + (r.cr || 0) + (r.cw || 0);
   function rowCost(r) {
@@ -463,8 +454,6 @@ footer a:hover{color:var(--text);text-decoration:underline}
     return ((r.in || 0) * p[0] + (r.out || 0) * p[1] + (r.cr || 0) * p[2] + ((r.cw || 0) - cw1h) * p[3] + cw1h * (p[4] != null ? p[4] : p[3])) / 1e6;
   }
   const val = rowTok, fmt = (n) => tok(n);
-  const hval = (r) => state.metric === 'cost' ? rowCost(r) || 0 : rowTok(r);
-  const hfmt = (n, full) => state.metric === 'cost' ? money(n, full) : tok(n);
   const srcName = (id) => (data.sources.find(s => s.id === id) || {name: id}).name;
   // With one source there is nothing to compare across sources, so group by model instead.
   const bySource = () => state.src === 'all' && data.sources.length > 1;
@@ -520,14 +509,13 @@ footer a:hover{color:var(--text);text-decoration:underline}
   /* ---------- static text ---------- */
   function renderChrome() {
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
-    $('m-cost').textContent = t('cost'); $('m-tok').textContent = t('tokens'); $('g-day').textContent = t('gDay'); $('g-week').textContent = t('gWeek'); $('g-month').textContent = t('gMonth'); $('granSeg').setAttribute('aria-label', t('ariaGran'));
+    $('g-day').textContent = t('gDay'); $('g-week').textContent = t('gWeek'); $('g-month').textContent = t('gMonth'); $('granSeg').setAttribute('aria-label', t('ariaGran'));
     $('langBtn').textContent = t('lang'); $('langBtn').setAttribute('aria-label', lang === 'zh' ? 'Switch to English' : '切换到中文');
     $('themeBtn').innerHTML = THEME_ICON[theme] + '<span>' + t(theme === 'system' ? 'themeSystem' : theme === 'light' ? 'themeLight' : 'themeDark') + '</span>';
-    $('srcSeg').setAttribute('aria-label', t('ariaSrc')); $('metricSeg').setAttribute('aria-label', t('ariaMetric'));
+    $('srcSeg').setAttribute('aria-label', t('ariaSrc'));
     $('quotaTitle').textContent = t('quotas'); $('dailyTitle').textContent = t('daily'); $('calTitle').textContent = t('calendar');
     $('punchTitle').textContent = t('rhythm'); $('tblTitle').textContent = t('breakdown'); $('aboutTitle').textContent = t('about');
     const ramp = $('ramp'); ramp.replaceChildren(t('less')); for (let i = 0; i < 5; i++) { const x = E('i'); x.style.background = `var(--h${i})`; ramp.appendChild(x); } ramp.append(t('more'));
-    document.querySelectorAll('#metricSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === state.metric)));
     const seg = $('srcSeg'); seg.replaceChildren(); seg.hidden = data.sources.length < 2;
     [{id: 'all', name: t('allSources')}].concat(data.sources).forEach(s => {
       const b = E('button'); b.type = 'button'; b.id = 'src-' + s.id;
@@ -555,22 +543,13 @@ footer a:hover{color:var(--text);text-decoration:underline}
   }
 
   /* ---------- hero ---------- */
-  function renderHero(tv) {
-    // The hero card follows the cost/token switch; the rest of the page stays in tokens.
-    const v = state.metric === 'cost' ? {...tv, ...summarize(tv.rows, hval)} : tv, fmt = hfmt;
-    $('heroLabel').textContent = state.metric === 'cost' ? t('spend') : t('tokUsed');
-    const big = $('big'); big.replaceChildren(fmt(v.total, true));
-    if (state.metric === 'tok') big.appendChild(E('span', 'unit', 'tokens'));
+  function renderHero(v) {
+    $('heroLabel').textContent = t('tokUsed');
+    const big = $('big'); big.replaceChildren(fmt(v.total), E('span', 'unit', 'tokens'));
     const meta = $('heroMeta'); meta.replaceChildren();
     const span = diff(v.start, v.last) + 1;
     meta.appendChild(E('span', null, t('perDay', {v: fmt(v.total / span)})));
     meta.appendChild(E('span', null, span2(v.start, v.last)));
-    if (state.metric === 'cost') {
-      const nAct = v.rows.filter(r => r.cost != null).length;
-      meta.appendChild(E('span', 'pill est', nAct === v.rows.length ? t('actual') : nAct ? t('mixed') : t('est')));
-      const np = new Set(v.rows.filter(r => rowCost(r) == null && rowTok(r) > 0).map(r => r.src + '|' + r.model)).size;
-      if (np) meta.appendChild(E('span', 'pill', t('unpriced', {n: np})));
-    }
 
     const box = $('spark'); box.replaceChildren();
     const s0 = v.byDay.size ? D(denseStart([...v.byDay.keys()])) : v.start;
@@ -669,7 +648,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
   const PRESETS = [['1m', 1], ['3m', 3], ['6m', 6], ['ytd', 0], ['1y', 12], ['all', null]];
   const MA_SPAN = {day: 7, week: 4, month: 3}, MIN_DAYS = 7;
   // The usage chart works like a stock chart: the window is a range of day indexes [a, b] from the first
-  // day with usage, moved by presets, wheel or pinch zoom, dragging, and the navigator underneath.
+  // day with usage, moved by the presets and the navigator underneath.
   const ch = {win: null, preset: 'all', n: 0};
 
   function presetWindow(p, d0, last) {
@@ -723,7 +702,6 @@ footer a:hover{color:var(--text);text-decoration:underline}
     const W = Math.max(300, box.clientWidth), narrow = W < 600, H = narrow ? 230 : 300;
     const m = {t: 14, r: 4, b: 26, l: narrow ? 46 : 58}, iw = W - m.l - m.r;
     const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img'}, box);
-    box.title = t('chartHint');
     let first = true, view_ = null;
 
     function draw() {
@@ -771,29 +749,10 @@ footer a:hover{color:var(--text);text-decoration:underline}
       });
       first = false;
       S('path', {d: smoothPath(vis.map((x, i) => [X(i), Y(x.ma)])), fill: 'none', stroke: 'var(--text)', 'stroke-opacity': .7, 'stroke-width': 1.6, 'stroke-linecap': 'round'}, svg);
-      // Crosshair: a line through the bar, a level line at the pointer, and tags on both axes.
-      const xh = S('g', {class: 'xh', visibility: 'hidden'}, svg);
-      const vl = S('line', {y1: m.t, y2: H - m.b}, xh), hl = S('line', {x1: m.l, x2: W - m.r}, xh);
-      const yt = S('g', {}, xh), ytr = S('rect', {x: 0, width: m.l - 4, height: 18, rx: 4}, yt), ytt = S('text', {x: m.l - 10, 'text-anchor': 'end'}, yt);
-      const xt = S('g', {}, xh), xtr = S('rect', {height: 18, rx: 4, y: H - 20}, xt), xtt = S('text', {y: H - 7, 'text-anchor': 'middle'}, xt);
-      view_.cross = (i, py) => {
-        if (i == null) { xh.setAttribute('visibility', 'hidden'); cols.classList.remove('hovering'); svg.querySelectorAll('.xl').forEach(l => l.removeAttribute('visibility')); readout(null); return; }
-        const x = vis[i]; xh.setAttribute('visibility', 'visible');
-        vl.setAttribute('x1', X(i)); vl.setAttribute('x2', X(i));
-        const yy = Math.max(m.t, Math.min(H - m.b, py)); hl.setAttribute('y1', yy); hl.setAttribute('y2', yy);
-        ytr.setAttribute('y', yy - 9); ytt.setAttribute('y', yy + 4); ytt.textContent = tok(Math.max(0, (H - m.b - yy) / (H - m.t - m.b) * top));
-        xtt.textContent = gran === 'month' ? monthFmt(x.from) : axisDate(x.from);
-        xtt.setAttribute('x', X(i)); const tw = xtt.getComputedTextLength() + 14; xtr.setAttribute('width', tw);
-        xtr.setAttribute('x', Math.max(m.l, Math.min(W - m.r - tw, X(i) - tw / 2))); xtt.setAttribute('x', +xtr.getAttribute('x') + tw / 2);
-        svg.querySelectorAll('.xl').forEach(l => l.setAttribute('visibility', 'hidden'));
-        cols.classList.add('hovering'); cols.querySelectorAll('.col.on').forEach(c => c.classList.remove('on'));
-        const c = cols.querySelector(`.col[data-i="${i}"]`); if (c) c.classList.add('on');
-        readout(x);
-      };
       readout(null); drawNav();
     }
 
-    // Readout row: the window's totals at rest, the bar under the crosshair while pointing.
+    // Readout row: the window's totals at rest, the bar under the mouse while pointing.
     function readout(x) {
       read.replaceChildren();
       const {gran, vis, from, to} = view_;
@@ -815,58 +774,11 @@ footer a:hover{color:var(--text);text-decoration:underline}
       ch.win = {a, b: a + span}; if (!keepPreset) ch.preset = null; redraw();
     }
     const px = (ev) => { const bb = svg.getBoundingClientRect(); return (ev.clientX - bb.left) * W / bb.width; };
-    const py = (ev) => { const bb = svg.getBoundingClientRect(); return (ev.clientY - bb.top) * W / bb.width; };
     const barAt = (ev) => Math.max(0, Math.min(view_.vis.length - 1, Math.floor((px(ev) - m.l) / (iw / view_.vis.length))));
-    const zoom = (factor, frac) => {
-      const {a, b} = ch.win, span = b - a, ns = Math.max(MIN_DAYS - 1, Math.min(n - 1, span * factor));
-      if (Math.abs(ns - span) < 1e-6) return false;
-      const anchor = a + frac * span; setWin(anchor - frac * ns, anchor - frac * ns + ns); return true;
-    };
-    svg.addEventListener('wheel', (ev) => {
-      const frac = Math.max(0, Math.min(1, (px(ev) - m.l) / iw));
-      if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) {
-        const {a, b} = ch.win, shift = ev.deltaX / iw * (b - a + 1);
-        if ((shift < 0 && a <= 0) || (shift > 0 && b >= n - 1)) return;
-        ev.preventDefault(); setWin(a + shift, b + shift); return;
-      }
-      if (zoom(Math.exp(ev.deltaY * (ev.deltaMode ? 0.05 : 0.0018)), frac)) ev.preventDefault();
-    }, {passive: false});
-
-    // Mouse: move for the crosshair, drag to pan. Touch: drag to pan, press and hold for the crosshair,
-    // two fingers to zoom. Vertical swipes still scroll the page.
-    const pts = new Map(); let drag = null, pinch = null, hold = 0;
-    const spread = () => { const xs = [...pts.values()]; return Math.abs(xs[0] - xs[1]); };
-    svg.addEventListener('pointerdown', (ev) => {
-      pts.set(ev.pointerId, px(ev));
-      try { svg.setPointerCapture(ev.pointerId); } catch (e) {}
-      if (pts.size === 2) { clearTimeout(hold); drag = null; view_.cross(null);
-        const xs = [...pts.values()]; pinch = {d: Math.max(20, spread()), span: ch.win.b - ch.win.a, frac: Math.max(0, Math.min(1, ((xs[0] + xs[1]) / 2 - m.l) / iw)), a: ch.win.a}; return; }
-      drag = {x: px(ev), a: ch.win.a, b: ch.win.b, moved: false, cross: ev.pointerType === 'mouse' ? false : null};
-      if (ev.pointerType !== 'mouse') hold = setTimeout(() => { if (drag && !drag.moved) { drag.cross = true; view_.cross(barAt(ev), py(ev)); } }, 300);
-    });
-    svg.addEventListener('pointermove', (ev) => {
-      if (pts.has(ev.pointerId)) pts.set(ev.pointerId, px(ev));
-      if (pinch && pts.size === 2) {
-        const ns = Math.max(MIN_DAYS - 1, Math.min(n - 1, pinch.span * pinch.d / Math.max(20, spread())));
-        const anchor = pinch.a + pinch.frac * pinch.span; setWin(anchor - pinch.frac * ns, anchor - pinch.frac * ns + ns); return;
-      }
-      if (drag && drag.cross) { view_.cross(barAt(ev), py(ev)); return; }
-      if (drag) {
-        const dx = px(ev) - drag.x;
-        if (!drag.moved && Math.abs(dx) > 4) { drag.moved = true; clearTimeout(hold); box.classList.add('panning'); view_.cross(null); }
-        if (drag.moved) { const shift = -dx / iw * (drag.b - drag.a + 1); setWin(drag.a + shift, drag.b + shift); }
-        return;
-      }
-      if (ev.pointerType === 'mouse') view_.cross(barAt(ev), py(ev));
-    });
-    const end = (ev) => {
-      pts.delete(ev.pointerId); clearTimeout(hold); box.classList.remove('panning');
-      if (pinch) { if (pts.size < 2) pinch = null; drag = null; return; }
-      if (drag && !drag.moved && ev.type === 'pointerup') view_.cross(barAt(ev), py(ev));  // a tap reads the bar
-      drag = null;
-    };
-    svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
-    svg.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse' && !drag) view_.cross(null); });
+    // The chart only reads: a mouse over a bar shows it in the readout row; clicks and taps do nothing.
+    // The window moves with the presets and the navigator underneath.
+    svg.addEventListener('pointermove', (ev) => { if (ev.pointerType === 'mouse') readout(view_.vis[barAt(ev)]); });
+    svg.addEventListener('pointerleave', () => readout(null));
 
     // Navigator: the whole history as a small area chart, with the window as a box you can drag or resize.
     const NH = 46, nsvg = S('svg', {viewBox: `0 0 ${W} ${NH + 18}`, role: 'group', 'aria-label': t('navigator')}, nav);
@@ -1043,7 +955,6 @@ footer a:hover{color:var(--text);text-decoration:underline}
 
   // Clicking the active period again returns to automatic (the finest period whose bars stay readable).
   document.querySelectorAll('#granSeg button').forEach(b => b.addEventListener('click', () => { state.gran = state.gran === b.dataset.g ? 'auto' : b.dataset.g; render(); }));
-  document.querySelectorAll('#metricSeg button').forEach(b => b.addEventListener('click', () => { state.metric = b.dataset.m; render(); }));
   $('langBtn').addEventListener('click', () => { lang = lang === 'zh' ? 'en' : 'zh'; store.set('lang', lang); if (data) render(); else if (failure) fail(failure); });
   $('themeBtn').addEventListener('click', () => { theme = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'; store.set('theme', theme); applyTheme(); if (data) render(); else if (failure) fail(failure); });
   addEventListener('scroll', () => $('top').classList.toggle('stuck', scrollY > 4), {passive: true});

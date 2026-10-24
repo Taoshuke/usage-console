@@ -157,9 +157,14 @@ svg text{fill:var(--text-3);font:11px var(--mono)}
 /* Charts */
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--text-2)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
-.legend .ma{width:14px;height:0;border-top:2px dashed var(--text-2)}
+.legend .ma{width:14px;height:0;border-top:2px solid color-mix(in srgb,var(--text) 70%,transparent);border-radius:2px}
+.legend .ma.dash{border-top:2px dashed var(--text-2)}
 .chart{position:relative;touch-action:pan-y;-webkit-user-select:none;user-select:none}
 .chart svg{display:block;width:100%;height:auto;overflow:visible}
+.cols .col{transition:opacity .15s}
+.cols.hovering .col{opacity:.4}
+.cols.hovering .col.on{opacity:1}
+.card-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px 16px}
 .tip{position:absolute;z-index:4;pointer-events:none;min-width:180px;padding:10px 12px;border-radius:var(--r-md);background:var(--tip-bg);
   border:1px solid var(--tip-border);box-shadow:0 10px 30px rgba(15,18,24,.14);font-size:12.5px;line-height:1.6}
 .tip .t{font-weight:600;margin-bottom:4px}
@@ -281,7 +286,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
   </section>
 
   <section class="card">
-    <div class="card-h"><h2 id="dailyTitle"></h2><div class="legend" id="dailyLegend"></div></div>
+    <div class="card-h"><h2 id="dailyTitle"></h2><div class="card-tools"><div class="legend" id="dailyLegend"></div><div class="mini-seg" role="group" id="granSeg"><button type="button" id="g-day" data-g="day"></button><button type="button" id="g-week" data-g="week"></button></div></div></div>
     <div class="card-b"><div class="chart" id="daily"></div></div>
   </section>
 
@@ -339,7 +344,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
       activeDays: 'Active days', ofDays: '{p} of days', peakDay: 'Peak day', streak: 'Current streak', longest: 'Longest: {n} days',
       longestSession: 'Longest session', allTime: 'All time', days: 'd',
       quotas: 'Usage limits', resetsIn: 'Resets in {t}', reset: 'Reset', left: '{p} remaining', window5h: '5-hour', window7d: 'Weekly',
-      daily: 'Daily usage', avg7: '7-day moving average', total: 'Total', noActivity: 'No activity', none: 'No data for this period',
+      daily: 'Daily usage', weekly: 'Weekly usage', totalOf: '{v} total', weekAvg: 'Weekly average', gDay: 'Day', gWeek: 'Week', ariaGran: 'Granularity', avg7: '7-day moving average', total: 'Total', noActivity: 'No activity', none: 'No data for this period',
       calendar: 'Activity heatmap', activeCount: '{n} active days', hidden: '{n} earlier day(s) not shown', less: 'Less', more: 'More', hoverDay: 'Hover or tap a day',
       rhythm: 'Activity by hour', peak: 'Peak hour {h}', messages: '{n} messages', hoverSlot: '{n} messages in total · hover or tap a slot',
       breakdown: 'Models', modelsCount: '{n} models', model: 'Model', share: 'Share', input: 'Input', output: 'Output', cacheRead: 'Cache read', cacheWrite: 'Cache write',
@@ -364,7 +369,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
       activeDays: '活跃天数', ofDays: '占比 {p}', peakDay: '峰值日', streak: '当前连续活跃', longest: '最长连续 {n} 天',
       longestSession: '最长会话', allTime: '全部时间', days: '天',
       quotas: '用量限额', resetsIn: '{t}后重置', reset: '已重置', left: '剩余 {p}', window5h: '5 小时', window7d: '每周',
-      daily: '每日用量', avg7: '7 日移动平均', total: '合计', noActivity: '无活动', none: '所选时段内无数据',
+      daily: '每日用量', weekly: '每周用量', totalOf: '共 {v}', weekAvg: '周平均', gDay: '日', gWeek: '周', ariaGran: '粒度', avg7: '7 日移动平均', total: '合计', noActivity: '无活动', none: '所选时段内无数据',
       calendar: '活动热力图', activeCount: '{n} 个活跃日', hidden: '更早的 {n} 天未显示', less: '少', more: '多', hoverDay: '悬停或点按查看单日数据',
       rhythm: '时段分布', peak: '峰值时段 {h}', messages: '{n} 条消息', hoverSlot: '共 {n} 条消息，悬停或点按查看某个时段',
       breakdown: '模型明细', modelsCount: '{n} 个模型', model: '模型', share: '占比', input: '输入', output: '输出', cacheRead: '缓存读取', cacheWrite: '缓存写入',
@@ -430,7 +435,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
   }
 
   let data = null, srcColor = {}, modelColor = {};
-  const state = {src: store.get('src') || 'all', range: store.get('range') || 'all', metric: store.get('metric') || 'cost'};
+  const state = {src: store.get('src') || 'all', range: store.get('range') || 'all', metric: store.get('metric') || 'cost', gran: store.get('gran') || 'auto'};
 
   const rowTok = (r) => (r.in || 0) + (r.out || 0) + (r.cr || 0) + (r.cw || 0);
   function rowCost(r) {
@@ -503,7 +508,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
   function renderChrome() {
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
     $('r-all').textContent = t('all'); $('r-30').textContent = t('d30'); $('r-7').textContent = t('d7');
-    $('m-cost').textContent = t('cost'); $('m-tok').textContent = t('tokens');
+    $('m-cost').textContent = t('cost'); $('m-tok').textContent = t('tokens'); $('g-day').textContent = t('gDay'); $('g-week').textContent = t('gWeek'); $('granSeg').setAttribute('aria-label', t('ariaGran'));
     $('langBtn').textContent = t('lang'); $('langBtn').setAttribute('aria-label', lang === 'zh' ? 'Switch to English' : '切换到中文');
     $('themeBtn').innerHTML = THEME_ICON[theme] + '<span>' + t(theme === 'system' ? 'themeSystem' : theme === 'light' ? 'themeLight' : 'themeDark') + '</span>';
     $('srcSeg').setAttribute('aria-label', t('ariaSrc')); $('rngSeg').setAttribute('aria-label', t('ariaRange')); $('metricSeg').setAttribute('aria-label', t('ariaMetric'));
@@ -635,65 +640,94 @@ footer a:hover{color:var(--text);text-decoration:underline}
 
   /* ---------- daily chart ---------- */
   function niceStep(max, n) { const raw = max / n || 1, mag = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(s => s * mag).find(s => raw <= s); }
+  // Smooth line through points with a monotone cubic, so the average never overshoots between days.
+  function smoothPath(pts) {
+    if (pts.length < 3) return pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('');
+    const n = pts.length, dx = [], sl = [], tg = [];
+    for (let i = 0; i < n - 1; i++) { dx[i] = pts[i + 1][0] - pts[i][0]; sl[i] = (pts[i + 1][1] - pts[i][1]) / dx[i]; }
+    tg[0] = sl[0]; tg[n - 1] = sl[n - 2];
+    for (let i = 1; i < n - 1; i++) tg[i] = sl[i - 1] * sl[i] <= 0 ? 0 : (sl[i - 1] + sl[i]) / 2;
+    let d = 'M' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1);
+    for (let i = 0; i < n - 1; i++) {
+      const h = dx[i] / 3;
+      d += `C${(pts[i][0] + h).toFixed(1)},${(pts[i][1] + tg[i] * h).toFixed(1)} ${(pts[i + 1][0] - h).toFixed(1)},${(pts[i + 1][1] - tg[i + 1] * h).toFixed(1)} ${pts[i + 1][0].toFixed(1)},${pts[i + 1][1].toFixed(1)}`;
+    }
+    return d;
+  }
+  const CHART_SERIES = 4;  // the bars split into at most three named series plus "other"
   function renderDaily(v) {
     const box = $('daily'), leg = $('dailyLegend'); box.replaceChildren(); leg.replaceChildren();
-    v.order.forEach(k => { const s = E('span'), d = E('i', 'dot'); d.style.background = gColor(k); s.append(d, gName(k)); leg.appendChild(s); });
-    const ma = E('span'); ma.append(E('i', 'ma'), t('avg7')); leg.appendChild(ma);
-    if (!v.total) { box.appendChild(E('div', 'empty', t('none'))); return; }
+    if (!v.total) { $('dailyTitle').textContent = t('daily'); box.appendChild(E('div', 'empty', t('none'))); return; }
     const start = state.range === 'all' ? D(denseStart([...v.byDay.keys()])) : v.start;
-    const days = []; for (let d = start; d <= v.last; d = add(d, 1)) days.push(d);
-    const tot = days.map(d => dayTotal(v.byDay.get(K(d))));
-    const avg = tot.map((_, i) => { const w = tot.slice(Math.max(0, i - 6), i + 1); return w.reduce((a, b) => a + b, 0) / w.length; });
-    const sorted = tot.filter(x => x > 0).sort((a, b) => a - b), p95 = sorted[Math.floor(sorted.length * .95)] || 0, mx = Math.max(...tot);
-    const cap = sorted.length > 10 && mx > p95 * 2 ? p95 * 1.35 : mx;
+    const span = diff(start, v.last) + 1;
+    const weekly = state.gran === 'week' || (state.gran !== 'day' && span > 60);
+    document.querySelectorAll('#granSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.g === (weekly ? 'week' : 'day'))));
+    // Buckets: one per day, or one per Monday-first week.
+    const buckets = [];
+    if (weekly) {
+      for (let w0 = add(start, -((start.getUTCDay() + 6) % 7)); w0 <= v.last; w0 = add(w0, 7)) buckets.push({from: w0, to: add(w0, 6) > v.last ? v.last : add(w0, 6)});
+    } else for (let d = start; d <= v.last; d = add(d, 1)) buckets.push({from: d, to: d});
+    // Series for the bars: the three largest groups, everything else as "other".
+    const named = v.order.filter(k => k !== REST).slice(0, CHART_SERIES - 1);
+    const series = v.order.length > named.length ? named.concat(REST) : named;
+    const keyOf = (k) => named.includes(k) ? k : REST;
+    buckets.forEach(b => {
+      b.parts = {}; b.total = 0;
+      for (let d = b.from; d <= b.to; d = add(d, 1)) {
+        const mm = v.byDay.get(K(d)); if (!mm) continue;
+        for (const k in mm) { const kk = keyOf(k); b.parts[kk] = (b.parts[kk] || 0) + mm[k]; b.total += mm[k]; }
+      }
+    });
+    const tot = buckets.map(b => b.total);
+    const avg = weekly ? null : tot.map((_, i) => { const w = tot.slice(Math.max(0, i - 6), i + 1); return w.reduce((a, b) => a + b, 0) / w.length; });
+    const mean = tot.reduce((a, b) => a + b, 0) / tot.length;
+
+    $('dailyTitle').textContent = (weekly ? t('weekly') : t('daily')) + ' · ' + t('totalOf', {v: fmt(v.total)});
+    series.forEach(k => { const el = E('span'), d = E('i', 'dot'); d.style.background = gColor(k); el.append(d, gName(k)); leg.appendChild(el); });
+    const ml = E('span'); ml.append(E('i', weekly ? 'ma dash' : 'ma'), weekly ? t('weekAvg') : t('avg7')); leg.appendChild(ml);
+
     const W = Math.max(300, box.clientWidth), narrow = W < 600, H = narrow ? 230 : 300;
-    const m = {t: 22, r: 2, b: 26, l: narrow ? 46 : 58};
-    const step = niceStep(cap, narrow ? 3 : 4), top = Math.ceil(cap / step) * step || 1;
-    const iw = W - m.l - m.r, bw = iw / days.length, barW = Math.max(1.5, Math.min(18, bw * (days.length > 45 ? .7 : .58)));
-    const X = (i) => m.l + i * bw + bw / 2, Y = (n) => H - m.b - Math.min(n, top) / top * (H - m.t - m.b);
-    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': t('daily')}, box);
+    const m = {t: 14, r: 4, b: 26, l: narrow ? 46 : 58};
+    // The axis always reaches the tallest bar: nothing is ever cut off.
+    const mx = Math.max(...tot), step = niceStep(mx, narrow ? 3 : 4), top = Math.ceil(mx / step - 1e-9) * step || 1;
+    const iw = W - m.l - m.r, bw = iw / buckets.length, barW = Math.max(2, Math.min(weekly ? 34 : 22, bw * .7));
+    const X = (i) => m.l + i * bw + bw / 2, Y = (n) => H - m.b - n / top * (H - m.t - m.b);
+    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': $('dailyTitle').textContent}, box);
     for (let y = 0; y <= top + 1e-9; y += step) {
       S('line', {x1: m.l, x2: W - m.r, y1: Y(y), y2: Y(y), stroke: y ? 'var(--border-soft)' : 'var(--border)'}, svg);
       const tx = S('text', {x: m.l - 10, y: Y(y) + 4, 'text-anchor': 'end'}, svg); tx.textContent = fmt(y);
     }
-    const every = Math.max(1, Math.round(days.length / (narrow ? 4 : 8)));
-    days.forEach((d, i) => { if (i % every === 0) { const tx = S('text', {x: X(i), y: H - 6, 'text-anchor': 'middle'}, svg); tx.textContent = axisDate(d); } });
-    const hl = S('rect', {y: m.t - 6, height: H - m.t - m.b + 6, width: bw, rx: 6, fill: 'var(--text)', 'fill-opacity': .05, visibility: 'hidden'}, svg);
-    const cols = S('g', {}, svg), capped = [];
-    const r = Math.min(4, barW / 2);
-    days.forEach((d, i) => {
-      const mrec = v.byDay.get(K(d)); if (!mrec) return;
-      const g = S('g', {class: 'grow', style: `animation-delay:${Math.min(400, i * 4)}ms`}, cols);
-      let acc = 0; const keys = v.order.filter(k => mrec[k]).reverse();
+    const every = Math.max(1, Math.round(buckets.length / (narrow ? 4 : weekly ? 9 : 8)));
+    buckets.forEach((b, i) => { if (i % every === 0) { const tx = S('text', {x: X(i), y: H - 6, 'text-anchor': 'middle'}, svg); tx.textContent = axisDate(b.from); } });
+    const cols = S('g', {class: 'cols'}, svg), r = Math.min(5, barW / 2);
+    buckets.forEach((b, i) => {
+      if (!b.total) return;
+      const g = S('g', {class: 'col grow', 'data-i': i, style: `animation-delay:${Math.min(400, i * (weekly ? 18 : 4))}ms`}, cols);
+      let acc = 0; const keys = series.filter(k => b.parts[k]).reverse();
       keys.forEach((k, j) => {
-        const y0 = Y(acc), y1 = Y(acc + mrec[k]); acc += mrec[k]; const h = y0 - y1; if (h < .3) return;
-        const isTop = j === keys.length - 1, rr = isTop ? Math.min(r, h) : 0, x0 = X(i) - barW / 2;
-        S('path', {d: `M${x0},${y0}V${y1 + rr}Q${x0},${y1} ${x0 + rr},${y1}H${x0 + barW - rr}Q${x0 + barW},${y1} ${x0 + barW},${y1 + rr}V${y0}Z`, fill: gColor(k)}, g);
+        const y0 = Y(acc), y1 = Y(acc + b.parts[k]); acc += b.parts[k]; const h = y0 - y1; if (h < .3) return;
+        const rr = j === keys.length - 1 ? Math.min(r, h) : 0, x0 = X(i) - barW / 2;
+        // A hairline in the card colour between stacked segments keeps them apart without borders.
+        S('path', {d: `M${x0},${y0}V${y1 + rr}Q${x0},${y1} ${x0 + rr},${y1}H${x0 + barW - rr}Q${x0 + barW},${y1} ${x0 + barW},${y1 + rr}V${y0}Z`,
+          fill: gColor(k), stroke: 'var(--surface)', 'stroke-width': j < keys.length - 1 ? .8 : 0}, g);
       });
-      if (tot[i] > top) capped.push(i);
     });
-    // Several capped days can sit side by side; label the tallest first and drop labels that would overlap.
-    const placed = [];
-    capped.sort((a, b) => tot[b] - tot[a]).forEach(i => {
-      const label = fmt(tot[i]) + ' ↑', w = label.length * 6.6 + 4;
-      let x = Math.min(W - m.r - w / 2, Math.max(m.l + w / 2, X(i)));
-      if (placed.some(p => Math.abs(p.x - x) < (p.w + w) / 2 + 6)) return;
-      placed.push({x, w});
-      const tx = S('text', {x, y: m.t - 8, 'text-anchor': 'middle', style: 'fill:var(--text-2);font-weight:500'}, svg); tx.textContent = label;
-    });
-    let pd = ''; avg.forEach((a, i) => pd += (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(a).toFixed(1));
-    S('path', {d: pd, fill: 'none', stroke: 'var(--text-2)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3', 'stroke-linejoin': 'round'}, svg);
+    if (weekly) S('line', {x1: m.l, x2: W - m.r, y1: Y(mean), y2: Y(mean), stroke: 'var(--text-2)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4'}, svg);
+    else S('path', {d: smoothPath(avg.map((a, i) => [X(i), Y(a)])), fill: 'none', stroke: 'var(--text)', 'stroke-opacity': .7, 'stroke-width': 1.6, 'stroke-linecap': 'round'}, svg);
     const tip = tipFor(box);
-    const at = (ev) => { const b = svg.getBoundingClientRect(); return Math.max(0, Math.min(days.length - 1, Math.floor(((ev.clientX - b.left) * W / b.width - m.l) / bw))); };
+    const at = (ev) => { const bb = svg.getBoundingClientRect(); return Math.max(0, Math.min(buckets.length - 1, Math.floor(((ev.clientX - bb.left) * W / bb.width - m.l) / bw))); };
     const show = (ev) => {
-      const i = at(ev), mrec = v.byDay.get(K(days[i])) || {}, b = svg.getBoundingClientRect();
-      hl.setAttribute('x', X(i) - bw / 2); hl.setAttribute('visibility', 'visible');
-      const rows = v.order.filter(k => mrec[k]).map(k => [gName(k), fmt(mrec[k]), gColor(k)]);
-      tip.show(X(i) * b.width / W, Y(tot[i]) * b.width / W, dateFmt(days[i], true),
-        rows.length ? rows.concat(['-', [t('total'), fmt(tot[i])], [t('avg7'), fmt(avg[i])]]) : [[t('noActivity'), '']]);
+      const i = at(ev), b = buckets[i], bb = svg.getBoundingClientRect();
+      cols.classList.add('hovering');
+      cols.querySelectorAll('.col.on').forEach(c => c.classList.remove('on'));
+      const c = cols.querySelector(`.col[data-i="${i}"]`); if (c) c.classList.add('on');
+      const title = weekly ? dateFmt(b.from) + ' – ' + dateFmt(b.to) : dateFmt(b.from, true);
+      const rows = series.filter(k => b.parts[k]).map(k => [gName(k), fmt(b.parts[k]), gColor(k)]);
+      const extra = weekly ? [t('weekAvg'), fmt(mean)] : [t('avg7'), fmt(avg[i])];
+      tip.show(X(i) * bb.width / W, Y(b.total) * bb.width / W, title, rows.length ? rows.concat(['-', [t('total'), fmt(b.total)], extra]) : [[t('noActivity'), '']]);
     };
     svg.addEventListener('pointermove', show); svg.addEventListener('pointerdown', show);
-    svg.addEventListener('pointerleave', () => { hl.setAttribute('visibility', 'hidden'); tip.hide(); });
+    svg.addEventListener('pointerleave', () => { cols.classList.remove('hovering'); tip.hide(); });
   }
 
   /* ---------- calendar ---------- */
@@ -816,6 +850,8 @@ footer a:hover{color:var(--text);text-decoration:underline}
   }
 
   document.querySelectorAll('#rngSeg button').forEach(b => b.addEventListener('click', () => { state.range = b.dataset.r; store.set('range', state.range); render(); }));
+  // Clicking the active granularity again returns to automatic (weekly beyond 60 days).
+  document.querySelectorAll('#granSeg button').forEach(b => b.addEventListener('click', () => { state.gran = b.getAttribute('aria-pressed') === 'true' && state.gran === b.dataset.g ? 'auto' : b.dataset.g; store.set('gran', state.gran); render(); }));
   document.querySelectorAll('#metricSeg button').forEach(b => b.addEventListener('click', () => { state.metric = b.dataset.m; store.set('metric', state.metric); render(); }));
   $('langBtn').addEventListener('click', () => { lang = lang === 'zh' ? 'en' : 'zh'; store.set('lang', lang); if (data) render(); });
   $('themeBtn').addEventListener('click', () => { theme = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'; store.set('theme', theme); applyTheme(); if (data) render(); });

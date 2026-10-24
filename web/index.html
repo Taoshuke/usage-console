@@ -85,7 +85,6 @@ svg text{fill:var(--text-3);font:11px var(--mono)}
   .top-in{gap:8px}
   .brand{flex:1}
   .seg.src{order:3;flex:1 1 100%}
-  .seg.rng{order:4}
 }
 
 /* Notice */
@@ -157,10 +156,21 @@ body.failed .seg,body.failed #noticeClose,body.failed main>:not(.notice):not(foo
 .q-bot{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px;color:var(--text-3)}
 
 /* Charts */
-.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--text-2)}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.legend .ma{width:14px;height:0;border-top:2px solid color-mix(in srgb,var(--text) 70%,transparent);border-radius:2px}
-.legend .ma.dash{border-top:2px dashed var(--text-2)}
+.readout{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;min-height:22px;margin-bottom:10px;font-size:12.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.readout .when{color:var(--text);font-weight:600}
+.readout span{display:inline-flex;align-items:center;gap:6px}
+.readout em{font-style:normal;font-weight:600;color:var(--text)}
+.readout .ma{width:14px;height:0;border-top:2px solid color-mix(in srgb,var(--text) 70%,transparent);border-radius:2px}
+.kline{cursor:crosshair}
+.kline.panning{cursor:grabbing}
+.xh line{stroke:var(--text-2);stroke-width:1;stroke-dasharray:3 3}
+.xh rect{fill:var(--text)}
+.xh text{fill:var(--surface);font-weight:600}
+.nav{margin-top:12px}
+.nav svg{cursor:pointer}
+.nav .sel{cursor:grab}
+.nav svg.dragging,.nav svg.dragging .sel{cursor:grabbing}
+.nav .hd{fill:var(--surface);stroke:var(--accent);stroke-width:1.2;cursor:ew-resize}
 .chart{position:relative;touch-action:pan-y;-webkit-user-select:none;user-select:none}
 .chart svg{display:block;width:100%;height:auto;overflow:visible}
 .cols .col{transition:opacity .15s}
@@ -241,11 +251,6 @@ footer a:hover{color:var(--text);text-decoration:underline}
       <span class="wordmark"><b>token</b>board</span>
     </div>
     <div class="seg src" id="srcSeg" role="group"></div>
-    <div class="seg rng" id="rngSeg" role="group">
-      <button type="button" id="r-all" data-r="all"></button>
-      <button type="button" id="r-30" data-r="30"></button>
-      <button type="button" id="r-7" data-r="7"></button>
-    </div>
     <div class="tools">
       <button type="button" class="icon-btn" id="langBtn"></button>
       <button type="button" class="icon-btn" id="themeBtn"></button>
@@ -288,8 +293,8 @@ footer a:hover{color:var(--text);text-decoration:underline}
   </section>
 
   <section class="card">
-    <div class="card-h"><h2 id="dailyTitle"></h2><div class="card-tools"><div class="legend" id="dailyLegend"></div><div class="mini-seg" role="group" id="granSeg"><button type="button" id="g-day" data-g="day"></button><button type="button" id="g-week" data-g="week"></button></div></div></div>
-    <div class="card-b"><div class="chart" id="daily"></div></div>
+    <div class="card-h"><h2 id="dailyTitle"></h2><div class="card-tools"><div class="mini-seg" role="group" id="rangeSeg"></div><div class="mini-seg" role="group" id="granSeg"><button type="button" id="g-day" data-g="day"></button><button type="button" id="g-week" data-g="week"></button><button type="button" id="g-month" data-g="month"></button></div></div></div>
+    <div class="card-b"><div class="readout" id="readout"></div><div class="chart kline" id="daily"></div><div class="chart nav" id="nav"></div></div>
   </section>
 
   <div class="duo">
@@ -336,18 +341,21 @@ footer a:hover{color:var(--text);text-decoration:underline}
   /* ---------- i18n ---------- */
   const I18N = {
     en: {
-      allSources: 'All sources', all: 'All', d30: '30D', d7: '7D', lang: '中文', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark',
+      allSources: 'All sources', all: 'All', lang: '中文', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark',
       demoNotice: 'Showing sample data. Run the collector to load your own usage.',
       loadFailed: 'Could not load usage data ({e}). Check the data source and reload the page.',
       pricesNotice: 'Model prices are placeholders and have not been verified; estimated costs are indicative only.',
       cost: 'Cost', tokens: 'Tokens', spend: 'Estimated cost', tokUsed: 'Tokens used',
-      bySource: 'By source', byModel: 'By model', vsPrev: 'vs. prior {n} days', perDay: '{v} / day',
+      bySource: 'By source', byModel: 'By model', perDay: '{v} / day',
       est: 'Est.', actual: 'Billed', mixed: 'Est. + billed',
       sessions: 'Sessions', perActive: '{v} per active day', requests: 'API requests', billingOnly: 'Billing sources only',
       activeDays: 'Active days', ofDays: '{p} of days', peakDay: 'Peak day', streak: 'Current streak', longest: 'Longest: {n} days',
       longestSession: 'Longest session', allTime: 'All time', days: 'd',
       quotas: 'Usage limits', resetsIn: 'Resets in {t}', reset: 'Reset', left: '{p} remaining', window5h: '5-hour', window7d: 'Weekly',
-      daily: 'Daily usage', weekly: 'Weekly usage', totalOf: '{v} total', weekAvg: 'Weekly average', gDay: 'Day', gWeek: 'Week', ariaGran: 'Granularity', avg7: '7-day moving average', total: 'Total', noActivity: 'No activity', none: 'No data for this period',
+      daily: 'Daily usage', weekly: 'Weekly usage', monthly: 'Monthly usage', totalOf: '{v} total', gDay: 'Day', gWeek: 'Week', gMonth: 'Month', ariaGran: 'Granularity',
+      ma_day: '7-day moving average', ma_week: '4-week moving average', ma_month: '3-month moving average',
+      r_1m: '1M', r_3m: '3M', r_6m: '6M', r_ytd: 'YTD', r_1y: '1Y', r_all: 'All', navigator: 'Time range navigator', chartHint: 'Scroll or pinch to zoom, drag to pan',
+      total: 'Total', noActivity: 'No activity', none: 'No data for this period',
       calendar: 'Activity heatmap', activeCount: '{n} active days', hidden: '{n} earlier day(s) not shown', less: 'Less', more: 'More', hoverDay: 'Hover or tap a day',
       rhythm: 'Activity by hour', peak: 'Peak hour {h}', messages: '{n} messages', hoverSlot: '{n} messages in total · hover or tap a slot',
       breakdown: 'Models', modelsCount: '{n} models', model: 'Model', share: 'Share', input: 'Input', output: 'Output', cacheRead: 'Cache read', cacheWrite: 'Cache write',
@@ -362,18 +370,21 @@ footer a:hover{color:var(--text);text-decoration:underline}
       ariaSrc: 'Source', ariaRange: 'Time range', ariaMetric: 'Metric',
     },
     zh: {
-      allSources: '全部来源', all: '全部', d30: '30 天', d7: '7 天', lang: 'EN', themeSystem: '跟随系统', themeLight: '浅色', themeDark: '深色',
+      allSources: '全部来源', all: '全部', lang: 'EN', themeSystem: '跟随系统', themeLight: '浅色', themeDark: '深色',
       demoNotice: '当前显示示例数据。运行采集脚本后显示你的实际用量。',
       loadFailed: '用量数据读取失败（{e}）。请检查数据源后刷新页面。',
       pricesNotice: '模型单价是占位值，尚未核实，预估费用仅供参考。',
       cost: '费用', tokens: 'Token', spend: '预估费用', tokUsed: 'Token 用量',
-      bySource: '按来源', byModel: '按模型', vsPrev: '环比前 {n} 天', perDay: '日均 {v}',
+      bySource: '按来源', byModel: '按模型', perDay: '日均 {v}',
       est: '预估', actual: '实际', mixed: '预估 + 实际',
       sessions: '会话', perActive: '每活跃日 {v} 个', requests: 'API 请求', billingOnly: '仅计费类来源',
       activeDays: '活跃天数', ofDays: '占比 {p}', peakDay: '峰值日', streak: '当前连续活跃', longest: '最长连续 {n} 天',
       longestSession: '最长会话', allTime: '全部时间', days: '天',
       quotas: '用量限额', resetsIn: '{t}后重置', reset: '已重置', left: '剩余 {p}', window5h: '5 小时', window7d: '每周',
-      daily: '每日用量', weekly: '每周用量', totalOf: '共 {v}', weekAvg: '周平均', gDay: '日', gWeek: '周', ariaGran: '粒度', avg7: '7 日移动平均', total: '合计', noActivity: '无活动', none: '所选时段内无数据',
+      daily: '每日用量', weekly: '每周用量', monthly: '每月用量', totalOf: '共 {v}', gDay: '日', gWeek: '周', gMonth: '月', ariaGran: '周期',
+      ma_day: '7 日移动平均', ma_week: '4 周移动平均', ma_month: '3 个月移动平均',
+      r_1m: '近 1 月', r_3m: '近 3 月', r_6m: '近 6 月', r_ytd: '今年', r_1y: '近 1 年', r_all: '全部', navigator: '时间范围导航', chartHint: '滚轮或双指缩放，拖动平移',
+      total: '合计', noActivity: '无活动', none: '所选时段内无数据',
       calendar: '活动热力图', activeCount: '{n} 个活跃日', hidden: '更早的 {n} 天未显示', less: '少', more: '多', hoverDay: '悬停或点按查看单日数据',
       rhythm: '时段分布', peak: '峰值时段 {h}', messages: '{n} 条消息', hoverSlot: '共 {n} 条消息，悬停或点按查看某个时段',
       breakdown: '模型明细', modelsCount: '{n} 个模型', model: '模型', share: '占比', input: '输入', output: '输出', cacheRead: '缓存读取', cacheWrite: '缓存写入',
@@ -439,7 +450,9 @@ footer a:hover{color:var(--text);text-decoration:underline}
   }
 
   let data = null, srcColor = {}, modelColor = {};
-  const state = {src: store.get('src') || 'all', range: store.get('range') || 'all', metric: store.get('metric') || 'cost', gran: store.get('gran') || 'auto'};
+  // The page counts tokens; the cost/token switch only applies to the hero card. Both it and the chart start
+  // from their defaults on every visit.
+  const state = {src: store.get('src') || 'all', metric: 'tok', gran: 'auto'};
 
   const rowTok = (r) => (r.in || 0) + (r.out || 0) + (r.cr || 0) + (r.cw || 0);
   function rowCost(r) {
@@ -449,8 +462,9 @@ footer a:hover{color:var(--text);text-decoration:underline}
     const cw1h = Math.min(r.cw1h || 0, r.cw || 0);  // cw counts all cache writes; cw1h is the 1-hour share
     return ((r.in || 0) * p[0] + (r.out || 0) * p[1] + (r.cr || 0) * p[2] + ((r.cw || 0) - cw1h) * p[3] + cw1h * (p[4] != null ? p[4] : p[3])) / 1e6;
   }
-  const val = (r) => state.metric === 'cost' ? rowCost(r) || 0 : rowTok(r);
-  const fmt = (n, full) => state.metric === 'cost' ? money(n, full) : tok(n);
+  const val = rowTok, fmt = (n) => tok(n);
+  const hval = (r) => state.metric === 'cost' ? rowCost(r) || 0 : rowTok(r);
+  const hfmt = (n, full) => state.metric === 'cost' ? money(n, full) : tok(n);
   const srcName = (id) => (data.sources.find(s => s.id === id) || {name: id}).name;
   // With one source there is nothing to compare across sources, so group by model instead.
   const bySource = () => state.src === 'all' && data.sources.length > 1;
@@ -459,20 +473,10 @@ footer a:hover{color:var(--text);text-decoration:underline}
   const gColor = (g) => g === REST ? 'var(--s7)' : bySource() ? srcColor[g] : modelColor[g] || 'var(--s7)';
   const today = () => D(data.generated.slice(0, 10));
 
-  function view() {
-    const rows = data.rows.filter(r => state.src === 'all' || r.src === state.src);
-    const last = today();
-    const first = rows.length ? D(rows.reduce((m, r) => r.d < m ? r.d : m, rows[0].d)) : last;
-    const start = state.range === 'all' ? first : add(last, -(Number(state.range) - 1));
-    const inR = rows.filter(r => { const d = D(r.d); return d >= start && d <= last; });
-    let prev = null;
-    if (state.range !== 'all') {
-      const ps = add(start, -Number(state.range)), pe = add(start, -1);
-      const pr = rows.filter(r => { const d = D(r.d); return d >= ps && d <= pe; });
-      if (pr.length) prev = pr.reduce((s, r) => s + val(r), 0);
-    }
+  // Totals per group and per day under value f, with the smallest groups folded into one "other" group.
+  function summarize(rows, f) {
     const groups = {}, byDay = new Map();
-    inR.forEach(r => { const g = gKey(r), v = val(r); groups[g] = (groups[g] || 0) + v;
+    rows.forEach(r => { const g = gKey(r), v = f(r); groups[g] = (groups[g] || 0) + v;
       const m = byDay.get(r.d) || byDay.set(r.d, {}).get(r.d); m[g] = (m[g] || 0) + v; });
     let order = Object.keys(groups).filter(g => groups[g] > 0).sort((a, b) => groups[b] - groups[a]);
     if (order.length > MAX_SERIES) {
@@ -481,10 +485,13 @@ footer a:hover{color:var(--text);text-decoration:underline}
       byDay.forEach(m => { let x = 0; tail.forEach(g => { if (m[g]) { x += m[g]; delete m[g]; } }); if (x) m[REST] = x; });
       order = order.slice(0, MAX_SERIES - 1).concat(REST);
     }
-    const total = inR.reduce((s, r) => s + val(r), 0);
-    const nAct = inR.filter(r => r.cost != null).length;
-    const kind = state.metric !== 'cost' ? '' : nAct === inR.length ? t('actual') : nAct ? t('mixed') : t('est');
-    return {rows, inR, start, last, prev, groups, order, byDay, total, kind};
+    return {groups, order, byDay, total: rows.reduce((s, r) => s + f(r), 0)};
+  }
+  function view() {
+    const rows = data.rows.filter(r => state.src === 'all' || r.src === state.src);
+    const last = today();
+    const start = rows.length ? D(rows.reduce((m, r) => r.d < m ? r.d : m, rows[0].d)) : last;
+    return {rows, inR: rows, start, last, ...summarize(rows, val)};
   }
   // All-time charts start at the first busy stretch, so one stray early day doesn't flatten months of axis.
   function denseStart(keys) { const ks = keys.slice().sort(); return ks.find((d, i) => i + 4 < ks.length && diff(D(d), D(ks[i + 4])) < 14) || ks[0]; }
@@ -513,15 +520,13 @@ footer a:hover{color:var(--text);text-decoration:underline}
   /* ---------- static text ---------- */
   function renderChrome() {
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
-    $('r-all').textContent = t('all'); $('r-30').textContent = t('d30'); $('r-7').textContent = t('d7');
-    $('m-cost').textContent = t('cost'); $('m-tok').textContent = t('tokens'); $('g-day').textContent = t('gDay'); $('g-week').textContent = t('gWeek'); $('granSeg').setAttribute('aria-label', t('ariaGran'));
+    $('m-cost').textContent = t('cost'); $('m-tok').textContent = t('tokens'); $('g-day').textContent = t('gDay'); $('g-week').textContent = t('gWeek'); $('g-month').textContent = t('gMonth'); $('granSeg').setAttribute('aria-label', t('ariaGran'));
     $('langBtn').textContent = t('lang'); $('langBtn').setAttribute('aria-label', lang === 'zh' ? 'Switch to English' : '切换到中文');
     $('themeBtn').innerHTML = THEME_ICON[theme] + '<span>' + t(theme === 'system' ? 'themeSystem' : theme === 'light' ? 'themeLight' : 'themeDark') + '</span>';
-    $('srcSeg').setAttribute('aria-label', t('ariaSrc')); $('rngSeg').setAttribute('aria-label', t('ariaRange')); $('metricSeg').setAttribute('aria-label', t('ariaMetric'));
+    $('srcSeg').setAttribute('aria-label', t('ariaSrc')); $('metricSeg').setAttribute('aria-label', t('ariaMetric'));
     $('quotaTitle').textContent = t('quotas'); $('dailyTitle').textContent = t('daily'); $('calTitle').textContent = t('calendar');
     $('punchTitle').textContent = t('rhythm'); $('tblTitle').textContent = t('breakdown'); $('aboutTitle').textContent = t('about');
     const ramp = $('ramp'); ramp.replaceChildren(t('less')); for (let i = 0; i < 5; i++) { const x = E('i'); x.style.background = `var(--h${i})`; ramp.appendChild(x); } ramp.append(t('more'));
-    document.querySelectorAll('#rngSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.r === state.range)));
     document.querySelectorAll('#metricSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === state.metric)));
     const seg = $('srcSeg'); seg.replaceChildren(); seg.hidden = data.sources.length < 2;
     [{id: 'all', name: t('allSources')}].concat(data.sources).forEach(s => {
@@ -550,25 +555,25 @@ footer a:hover{color:var(--text);text-decoration:underline}
   }
 
   /* ---------- hero ---------- */
-  function renderHero(v) {
+  function renderHero(tv) {
+    // The hero card follows the cost/token switch; the rest of the page stays in tokens.
+    const v = state.metric === 'cost' ? {...tv, ...summarize(tv.rows, hval)} : tv, fmt = hfmt;
     $('heroLabel').textContent = state.metric === 'cost' ? t('spend') : t('tokUsed');
     const big = $('big'); big.replaceChildren(fmt(v.total, true));
     if (state.metric === 'tok') big.appendChild(E('span', 'unit', 'tokens'));
     const meta = $('heroMeta'); meta.replaceChildren();
-    if (v.prev != null && v.prev > 0) {
-      const ch = v.total / v.prev - 1;
-      meta.appendChild(E('span', 'pill ' + (ch >= 0 ? 'up' : 'down'), (ch >= 0 ? '↑ ' : '↓ ') + Math.abs(ch * 100).toFixed(0) + '%'));
-      meta.appendChild(E('span', null, t('vsPrev', {n: state.range})));
-    }
     const span = diff(v.start, v.last) + 1;
     meta.appendChild(E('span', null, t('perDay', {v: fmt(v.total / span)})));
-    meta.appendChild(E('span', null, dateFmt(v.start) + ' – ' + dateFmt(v.last)));
-    if (v.kind) meta.appendChild(E('span', 'pill est', v.kind));
-    if (state.metric === 'cost') { const np = new Set(v.inR.filter(r => rowCost(r) == null).map(r => r.src + '|' + r.model)).size;
-      if (np) meta.appendChild(E('span', 'pill', t('unpriced', {n: np}))); }
+    meta.appendChild(E('span', null, span2(v.start, v.last)));
+    if (state.metric === 'cost') {
+      const nAct = v.rows.filter(r => r.cost != null).length;
+      meta.appendChild(E('span', 'pill est', nAct === v.rows.length ? t('actual') : nAct ? t('mixed') : t('est')));
+      const np = new Set(v.rows.filter(r => rowCost(r) == null && rowTok(r) > 0).map(r => r.src + '|' + r.model)).size;
+      if (np) meta.appendChild(E('span', 'pill', t('unpriced', {n: np})));
+    }
 
     const box = $('spark'); box.replaceChildren();
-    const s0 = state.range === 'all' && v.byDay.size ? D(denseStart([...v.byDay.keys()])) : v.start;
+    const s0 = v.byDay.size ? D(denseStart([...v.byDay.keys()])) : v.start;
     const days = []; for (let d = s0; d <= v.last; d = add(d, 1)) days.push(d);
     const ys = days.map(d => dayTotal(v.byDay.get(K(d))));
     const sm = ys.map((_, i) => { const w = ys.slice(Math.max(0, i - 2), i + 3); return w.reduce((a, b) => a + b, 0) / w.length; });
@@ -610,12 +615,12 @@ footer a:hover{color:var(--text);text-decoration:underline}
     if (sessions) items.push({k: t('sessions'), v: int(sessions), d: active ? t('perActive', {v: (sessions / active).toFixed(1)}) : ''});
     if (requests) items.push({k: t('requests'), v: int(requests), d: t('billingOnly')});
     items.push({k: t('activeDays'), v: String(active), small: '/' + span, d: t('ofDays', {p: pct(active / span)})});
-    items.push({k: t('peakDay'), v: peak ? dateFmt(D(peak.d)) : '—', d: peak ? fmt(peak.v) : ''});
+    items.push({k: t('peakDay'), v: peak ? dateY(D(peak.d)) : '—', d: peak ? fmt(peak.v) : ''});
     items.push({k: t('streak'), tag: t('allTime'), v: String(st.current), small: ' ' + t('days'), d: t('longest', {n: st.best})});
     const ls = data.longest_session;
     if (ls && (state.src === 'all' || state.src === ls.src)) {
       const m = Math.round(ls.ms / 6e4), dd = Math.floor(m / 1440), hh = Math.floor(m % 1440 / 60), mm = m % 60;
-      items.push({k: t('longestSession'), tag: t('allTime'), v: dd ? `${dd}d ${hh}h` : `${hh}h ${mm}m`, d: srcName(ls.src) + ' · ' + dateFmt(D(ls.start))});
+      items.push({k: t('longestSession'), tag: t('allTime'), v: dd ? `${dd}d ${hh}h` : `${hh}h ${mm}m`, d: srcName(ls.src) + ' · ' + dateY(D(ls.start))});
     }
     box.style.setProperty('--n', items.length);
     items.forEach(it => {
@@ -661,79 +666,261 @@ footer a:hover{color:var(--text);text-decoration:underline}
     return d;
   }
   const CHART_SERIES = 4;  // the bars split into at most three named series plus "other"
+  const PRESETS = [['1m', 1], ['3m', 3], ['6m', 6], ['ytd', 0], ['1y', 12], ['all', null]];
+  const MA_SPAN = {day: 7, week: 4, month: 3}, MIN_DAYS = 7;
+  // The usage chart works like a stock chart: the window is a range of day indexes [a, b] from the first
+  // day with usage, moved by presets, wheel or pinch zoom, dragging, and the navigator underneath.
+  const ch = {win: null, preset: 'all', n: 0};
+
+  function presetWindow(p, d0, last) {
+    const n = diff(d0, last) + 1, row = PRESETS.find(x => x[0] === p);
+    if (!row || row[1] === null) return {a: 0, b: n - 1};
+    const from = row[1] ? new Date(Date.UTC(last.getUTCFullYear(), last.getUTCMonth() - row[1], last.getUTCDate() + 1))
+      : new Date(Date.UTC(last.getUTCFullYear(), 0, 1));
+    return {a: Math.max(0, Math.min(diff(d0, from), n - MIN_DAYS)), b: n - 1};
+  }
+  function makeBuckets(gran, d0, last, byDay, keyOf) {
+    const out = [];
+    let s = gran === 'day' ? d0 : gran === 'week' ? add(d0, -((d0.getUTCDay() + 6) % 7)) : new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth(), 1));
+    while (s <= last) {
+      const e = gran === 'day' ? s : gran === 'week' ? add(s, 6) : new Date(Date.UTC(s.getUTCFullYear(), s.getUTCMonth() + 1, 0));
+      const b = {from: s, to: e > last ? last : e, parts: {}, total: 0};
+      for (let d = s < d0 ? d0 : s; d <= b.to; d = add(d, 1)) {
+        const mm = byDay.get(K(d)); if (!mm) continue;
+        for (const k in mm) { const kk = keyOf(k); b.parts[kk] = (b.parts[kk] || 0) + mm[k]; b.total += mm[k]; }
+      }
+      out.push(b); s = add(e, 1);
+    }
+    const w = MA_SPAN[gran];  // trailing moving average, computed over all buckets so the window edges stay right
+    out.forEach((b, i) => { const xs = out.slice(Math.max(0, i - w + 1), i + 1); b.ma = xs.reduce((a, x) => a + x.total, 0) / xs.length; });
+    return out;
+  }
+  // Dates outside the current year carry the year, so a long history never reads ambiguously.
+  const dateY = (d, withWd, year) => { const o = {month: 'short', day: 'numeric', timeZone: 'UTC'}; if (withWd) o.weekday = 'short';
+    if (year || d.getUTCFullYear() !== today().getUTCFullYear()) o.year = 'numeric'; return d.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', o); };
+  const span2 = (a, b) => { const y = a.getUTCFullYear() !== b.getUTCFullYear(); return dateY(a, false, y) + ' – ' + dateY(b, false, y); };
+  const bucketTitle = (b, gran) => gran === 'day' ? dateY(b.from, true) : gran === 'week' ? span2(b.from, b.to) : monthFmt(b.from);
+
   function renderDaily(v) {
-    const box = $('daily'), leg = $('dailyLegend'); box.replaceChildren(); leg.replaceChildren();
-    if (!v.total) { $('dailyTitle').textContent = t('daily'); box.appendChild(E('div', 'empty', t('none'))); return; }
-    const start = state.range === 'all' ? D(denseStart([...v.byDay.keys()])) : v.start;
-    const span = diff(start, v.last) + 1;
-    const weekly = state.gran === 'week' || (state.gran !== 'day' && span > 60);
-    document.querySelectorAll('#granSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.g === (weekly ? 'week' : 'day'))));
-    // Buckets: one per day, or one per Monday-first week.
-    const buckets = [];
-    if (weekly) {
-      for (let w0 = add(start, -((start.getUTCDay() + 6) % 7)); w0 <= v.last; w0 = add(w0, 7)) buckets.push({from: w0, to: add(w0, 6) > v.last ? v.last : add(w0, 6)});
-    } else for (let d = start; d <= v.last; d = add(d, 1)) buckets.push({from: d, to: d});
-    // Series for the bars: the three largest groups, everything else as "other".
+    const box = $('daily'), nav = $('nav'), read = $('readout');
+    box.replaceChildren(); nav.replaceChildren(); read.replaceChildren();
+    const keys = [...v.byDay.keys()].filter(d => dayTotal(v.byDay.get(d)) > 0).sort();
+    const rs = $('rangeSeg'); rs.replaceChildren(); rs.setAttribute('aria-label', t('ariaRange'));
+    if (!keys.length) { $('dailyTitle').textContent = t('daily'); box.appendChild(E('div', 'empty', t('none'))); return; }
+    const d0 = D(keys[0]), last = v.last, n = diff(d0, last) + 1;
+    if (!ch.win || ch.n !== n) { ch.n = n; ch.win = presetWindow(ch.preset || 'all', d0, last); }
+
     const named = v.order.filter(k => k !== REST).slice(0, CHART_SERIES - 1);
     const series = v.order.length > named.length ? named.concat(REST) : named;
     const keyOf = (k) => named.includes(k) ? k : REST;
-    buckets.forEach(b => {
-      b.parts = {}; b.total = 0;
-      for (let d = b.from; d <= b.to; d = add(d, 1)) {
-        const mm = v.byDay.get(K(d)); if (!mm) continue;
-        for (const k in mm) { const kk = keyOf(k); b.parts[kk] = (b.parts[kk] || 0) + mm[k]; b.total += mm[k]; }
-      }
+    const cache = {}, bucketsOf = (g) => cache[g] || (cache[g] = makeBuckets(g, d0, last, v.byDay, keyOf));
+
+    PRESETS.forEach(([p]) => {
+      const b = E('button', null, t('r_' + p)); b.type = 'button'; b.dataset.p = p;
+      b.addEventListener('click', () => { ch.preset = p; ch.win = presetWindow(p, d0, last); draw(); });
+      rs.appendChild(b);
     });
-    const tot = buckets.map(b => b.total);
-    const avg = weekly ? null : tot.map((_, i) => { const w = tot.slice(Math.max(0, i - 6), i + 1); return w.reduce((a, b) => a + b, 0) / w.length; });
-    const mean = tot.reduce((a, b) => a + b, 0) / tot.length;
-
-    $('dailyTitle').textContent = (weekly ? t('weekly') : t('daily')) + ' · ' + t('totalOf', {v: fmt(v.total)});
-    series.forEach(k => { const el = E('span'), d = E('i', 'dot'); d.style.background = gColor(k); el.append(d, gName(k)); leg.appendChild(el); });
-    const ml = E('span'); ml.append(E('i', weekly ? 'ma dash' : 'ma'), weekly ? t('weekAvg') : t('avg7')); leg.appendChild(ml);
-
     const W = Math.max(300, box.clientWidth), narrow = W < 600, H = narrow ? 230 : 300;
-    const m = {t: 14, r: 4, b: 26, l: narrow ? 46 : 58};
-    // The axis always reaches the tallest bar: nothing is ever cut off.
-    const mx = Math.max(...tot), step = niceStep(mx, narrow ? 3 : 4), top = Math.ceil(mx / step - 1e-9) * step || 1;
-    const iw = W - m.l - m.r, bw = iw / buckets.length, barW = Math.max(2, Math.min(weekly ? 34 : 22, bw * .7));
-    const X = (i) => m.l + i * bw + bw / 2, Y = (n) => H - m.b - n / top * (H - m.t - m.b);
-    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': $('dailyTitle').textContent}, box);
-    for (let y = 0; y <= top + 1e-9; y += step) {
-      S('line', {x1: m.l, x2: W - m.r, y1: Y(y), y2: Y(y), stroke: y ? 'var(--border-soft)' : 'var(--border)'}, svg);
-      const tx = S('text', {x: m.l - 10, y: Y(y) + 4, 'text-anchor': 'end'}, svg); tx.textContent = fmt(y);
-    }
-    const every = Math.max(1, Math.round(buckets.length / (narrow ? 4 : weekly ? 9 : 8)));
-    buckets.forEach((b, i) => { if (i % every === 0) { const tx = S('text', {x: X(i), y: H - 6, 'text-anchor': 'middle'}, svg); tx.textContent = axisDate(b.from); } });
-    const cols = S('g', {class: 'cols'}, svg), r = Math.min(5, barW / 2);
-    buckets.forEach((b, i) => {
-      if (!b.total) return;
-      const g = S('g', {class: 'col grow', 'data-i': i, style: `animation-delay:${Math.min(400, i * (weekly ? 18 : 4))}ms`}, cols);
-      let acc = 0; const keys = series.filter(k => b.parts[k]).reverse();
-      keys.forEach((k, j) => {
-        const y0 = Y(acc), y1 = Y(acc + b.parts[k]); acc += b.parts[k]; const h = y0 - y1; if (h < .3) return;
-        const rr = j === keys.length - 1 ? Math.min(r, h) : 0, x0 = X(i) - barW / 2;
-        // A hairline in the card colour between stacked segments keeps them apart without borders.
-        S('path', {d: `M${x0},${y0}V${y1 + rr}Q${x0},${y1} ${x0 + rr},${y1}H${x0 + barW - rr}Q${x0 + barW},${y1} ${x0 + barW},${y1 + rr}V${y0}Z`,
-          fill: gColor(k), stroke: 'var(--surface)', 'stroke-width': j < keys.length - 1 ? .8 : 0}, g);
+    const m = {t: 14, r: 4, b: 26, l: narrow ? 46 : 58}, iw = W - m.l - m.r;
+    const svg = S('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img'}, box);
+    box.title = t('chartHint');
+    let first = true, view_ = null;
+
+    function draw() {
+      const {a, b} = ch.win, a0 = Math.floor(a + 1e-9), b0 = Math.min(n - 1, Math.ceil(b - 1e-9));
+      const from = add(d0, a0), to = add(d0, b0), days = b0 - a0 + 1, maxBars = Math.floor(iw / 6);
+      const gran = state.gran !== 'auto' ? state.gran : days <= maxBars ? 'day' : days / 7 <= maxBars ? 'week' : 'month';
+      const vis = bucketsOf(gran).filter(x => x.to >= from && x.from <= to);
+      view_ = {gran, vis, from, to};
+      rs.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.p === ch.preset)));
+      document.querySelectorAll('#granSeg button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.g === gran)));
+      const total = vis.reduce((s, x) => s + x.total, 0);
+      $('dailyTitle').textContent = t(gran === 'day' ? 'daily' : gran === 'week' ? 'weekly' : 'monthly') + ' · ' + t('totalOf', {v: tok(total)});
+      svg.setAttribute('aria-label', $('dailyTitle').textContent);
+      svg.replaceChildren();
+
+      const bw = iw / vis.length, barW = Math.max(1, Math.min(gran === 'day' ? 22 : 34, bw * .7));
+      const mx = Math.max(...vis.map(x => Math.max(x.total, x.ma))), step = niceStep(mx, narrow ? 3 : 4), top = Math.ceil(mx / step - 1e-9) * step || 1;
+      const X = (i) => m.l + i * bw + bw / 2, Y = (x) => H - m.b - x / top * (H - m.t - m.b);
+      for (let y = 0; y <= top + 1e-9; y += step) {
+        S('line', {x1: m.l, x2: W - m.r, y1: Y(y), y2: Y(y), stroke: y ? 'var(--border-soft)' : 'var(--border)'}, svg);
+        S('text', {x: m.l - 10, y: Y(y) + 4, 'text-anchor': 'end'}, svg).textContent = tok(y);
+      }
+      // Axis labels follow the span: days, then months, with the year wherever it changes.
+      const every = Math.max(1, Math.ceil(vis.length / Math.max(2, Math.floor(iw / (gran === 'month' ? 70 : 64)))));
+      let lastYear = null;
+      vis.forEach((x, i) => {
+        if (i % every) return;
+        const y = x.from.getUTCFullYear(), withYear = lastYear !== null && y !== lastYear; lastYear = y;
+        const label = gran === 'month' ? x.from.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', withYear || x.from.getUTCMonth() === 0 ? {year: 'numeric', month: 'short', timeZone: 'UTC'} : {month: 'short', timeZone: 'UTC'})
+          : (withYear ? y + '/' : '') + axisDate(x.from);
+        S('text', {x: X(i), y: H - 6, 'text-anchor': 'middle', class: 'xl', 'data-i': i}, svg).textContent = label;
       });
-    });
-    if (weekly) S('line', {x1: m.l, x2: W - m.r, y1: Y(mean), y2: Y(mean), stroke: 'var(--text-2)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4'}, svg);
-    else S('path', {d: smoothPath(avg.map((a, i) => [X(i), Y(a)])), fill: 'none', stroke: 'var(--text)', 'stroke-opacity': .7, 'stroke-width': 1.6, 'stroke-linecap': 'round'}, svg);
-    const tip = tipFor(box);
-    const at = (ev) => { const bb = svg.getBoundingClientRect(); return Math.max(0, Math.min(buckets.length - 1, Math.floor(((ev.clientX - bb.left) * W / bb.width - m.l) / bw))); };
-    const show = (ev) => {
-      const i = at(ev), b = buckets[i], bb = svg.getBoundingClientRect();
-      cols.classList.add('hovering');
-      cols.querySelectorAll('.col.on').forEach(c => c.classList.remove('on'));
-      const c = cols.querySelector(`.col[data-i="${i}"]`); if (c) c.classList.add('on');
-      const title = weekly ? dateFmt(b.from) + ' – ' + dateFmt(b.to) : dateFmt(b.from, true);
-      const rows = series.filter(k => b.parts[k]).map(k => [gName(k), fmt(b.parts[k]), gColor(k)]);
-      const extra = weekly ? [t('weekAvg'), fmt(mean)] : [t('avg7'), fmt(avg[i])];
-      tip.show(X(i) * bb.width / W, Y(b.total) * bb.width / W, title, rows.length ? rows.concat(['-', [t('total'), fmt(b.total)], extra]) : [[t('noActivity'), '']]);
+      const cols = S('g', {class: 'cols'}, svg), r = Math.min(5, barW / 2);
+      vis.forEach((x, i) => {
+        if (!x.total) return;
+        const g = S('g', {class: 'col' + (first ? ' grow' : ''), 'data-i': i, style: first ? `animation-delay:${Math.min(400, i * 4)}ms` : ''}, cols);
+        let acc = 0; const ks = series.filter(k => x.parts[k]).reverse();
+        ks.forEach((k, j) => {
+          const y0 = Y(acc), y1 = Y(acc + x.parts[k]); acc += x.parts[k]; const h = y0 - y1; if (h < .3) return;
+          const rr = j === ks.length - 1 ? Math.min(r, h) : 0, x0 = X(i) - barW / 2;
+          // A hairline in the card colour between stacked segments keeps them apart without borders.
+          S('path', {d: `M${x0},${y0}V${y1 + rr}Q${x0},${y1} ${x0 + rr},${y1}H${x0 + barW - rr}Q${x0 + barW},${y1} ${x0 + barW},${y1 + rr}V${y0}Z`,
+            fill: gColor(k), stroke: 'var(--surface)', 'stroke-width': j < ks.length - 1 ? .8 : 0}, g);
+        });
+      });
+      first = false;
+      S('path', {d: smoothPath(vis.map((x, i) => [X(i), Y(x.ma)])), fill: 'none', stroke: 'var(--text)', 'stroke-opacity': .7, 'stroke-width': 1.6, 'stroke-linecap': 'round'}, svg);
+      // Crosshair: a line through the bar, a level line at the pointer, and tags on both axes.
+      const xh = S('g', {class: 'xh', visibility: 'hidden'}, svg);
+      const vl = S('line', {y1: m.t, y2: H - m.b}, xh), hl = S('line', {x1: m.l, x2: W - m.r}, xh);
+      const yt = S('g', {}, xh), ytr = S('rect', {x: 0, width: m.l - 4, height: 18, rx: 4}, yt), ytt = S('text', {x: m.l - 10, 'text-anchor': 'end'}, yt);
+      const xt = S('g', {}, xh), xtr = S('rect', {height: 18, rx: 4, y: H - 20}, xt), xtt = S('text', {y: H - 7, 'text-anchor': 'middle'}, xt);
+      view_.cross = (i, py) => {
+        if (i == null) { xh.setAttribute('visibility', 'hidden'); cols.classList.remove('hovering'); svg.querySelectorAll('.xl').forEach(l => l.removeAttribute('visibility')); readout(null); return; }
+        const x = vis[i]; xh.setAttribute('visibility', 'visible');
+        vl.setAttribute('x1', X(i)); vl.setAttribute('x2', X(i));
+        const yy = Math.max(m.t, Math.min(H - m.b, py)); hl.setAttribute('y1', yy); hl.setAttribute('y2', yy);
+        ytr.setAttribute('y', yy - 9); ytt.setAttribute('y', yy + 4); ytt.textContent = tok(Math.max(0, (H - m.b - yy) / (H - m.t - m.b) * top));
+        xtt.textContent = gran === 'month' ? monthFmt(x.from) : axisDate(x.from);
+        xtt.setAttribute('x', X(i)); const tw = xtt.getComputedTextLength() + 14; xtr.setAttribute('width', tw);
+        xtr.setAttribute('x', Math.max(m.l, Math.min(W - m.r - tw, X(i) - tw / 2))); xtt.setAttribute('x', +xtr.getAttribute('x') + tw / 2);
+        svg.querySelectorAll('.xl').forEach(l => l.setAttribute('visibility', 'hidden'));
+        cols.classList.add('hovering'); cols.querySelectorAll('.col.on').forEach(c => c.classList.remove('on'));
+        const c = cols.querySelector(`.col[data-i="${i}"]`); if (c) c.classList.add('on');
+        readout(x);
+      };
+      readout(null); drawNav();
+    }
+
+    // Readout row: the window's totals at rest, the bar under the crosshair while pointing.
+    function readout(x) {
+      read.replaceChildren();
+      const {gran, vis, from, to} = view_;
+      const sums = {}; let tot = 0;
+      if (!x) vis.forEach(b => { for (const k in b.parts) sums[k] = (sums[k] || 0) + b.parts[k]; tot += b.total; });
+      read.appendChild(E('b', 'when', x ? bucketTitle(x, gran) : span2(from, to)));
+      series.forEach(k => { const s = E('span'), d = E('i', 'dot'); d.style.background = gColor(k);
+        s.append(d, gName(k)); s.appendChild(E('em', null, tok(x ? x.parts[k] || 0 : sums[k] || 0))); read.appendChild(s); });
+      const s = E('span', null, t('total')); s.appendChild(E('em', null, tok(x ? x.total : tot))); read.appendChild(s);
+      const ma = E('span'); ma.append(E('i', 'ma'), t('ma_' + gran)); if (x) ma.appendChild(E('em', null, tok(x.ma))); read.appendChild(ma);
+    }
+
+    let raf = 0;
+    const redraw = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); };
+    function setWin(a, b, keepPreset) {
+      let span = Math.max(MIN_DAYS - 1, Math.min(n - 1, b - a));
+      if (n - 1 < MIN_DAYS - 1) span = n - 1;
+      a = Math.max(0, Math.min(a, n - 1 - span));
+      ch.win = {a, b: a + span}; if (!keepPreset) ch.preset = null; redraw();
+    }
+    const px = (ev) => { const bb = svg.getBoundingClientRect(); return (ev.clientX - bb.left) * W / bb.width; };
+    const py = (ev) => { const bb = svg.getBoundingClientRect(); return (ev.clientY - bb.top) * W / bb.width; };
+    const barAt = (ev) => Math.max(0, Math.min(view_.vis.length - 1, Math.floor((px(ev) - m.l) / (iw / view_.vis.length))));
+    const zoom = (factor, frac) => {
+      const {a, b} = ch.win, span = b - a, ns = Math.max(MIN_DAYS - 1, Math.min(n - 1, span * factor));
+      if (Math.abs(ns - span) < 1e-6) return false;
+      const anchor = a + frac * span; setWin(anchor - frac * ns, anchor - frac * ns + ns); return true;
     };
-    svg.addEventListener('pointermove', show); svg.addEventListener('pointerdown', show);
-    svg.addEventListener('pointerleave', () => { cols.classList.remove('hovering'); tip.hide(); });
+    svg.addEventListener('wheel', (ev) => {
+      const frac = Math.max(0, Math.min(1, (px(ev) - m.l) / iw));
+      if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) {
+        const {a, b} = ch.win, shift = ev.deltaX / iw * (b - a + 1);
+        if ((shift < 0 && a <= 0) || (shift > 0 && b >= n - 1)) return;
+        ev.preventDefault(); setWin(a + shift, b + shift); return;
+      }
+      if (zoom(Math.exp(ev.deltaY * (ev.deltaMode ? 0.05 : 0.0018)), frac)) ev.preventDefault();
+    }, {passive: false});
+
+    // Mouse: move for the crosshair, drag to pan. Touch: drag to pan, press and hold for the crosshair,
+    // two fingers to zoom. Vertical swipes still scroll the page.
+    const pts = new Map(); let drag = null, pinch = null, hold = 0;
+    const spread = () => { const xs = [...pts.values()]; return Math.abs(xs[0] - xs[1]); };
+    svg.addEventListener('pointerdown', (ev) => {
+      pts.set(ev.pointerId, px(ev));
+      try { svg.setPointerCapture(ev.pointerId); } catch (e) {}
+      if (pts.size === 2) { clearTimeout(hold); drag = null; view_.cross(null);
+        const xs = [...pts.values()]; pinch = {d: Math.max(20, spread()), span: ch.win.b - ch.win.a, frac: Math.max(0, Math.min(1, ((xs[0] + xs[1]) / 2 - m.l) / iw)), a: ch.win.a}; return; }
+      drag = {x: px(ev), a: ch.win.a, b: ch.win.b, moved: false, cross: ev.pointerType === 'mouse' ? false : null};
+      if (ev.pointerType !== 'mouse') hold = setTimeout(() => { if (drag && !drag.moved) { drag.cross = true; view_.cross(barAt(ev), py(ev)); } }, 300);
+    });
+    svg.addEventListener('pointermove', (ev) => {
+      if (pts.has(ev.pointerId)) pts.set(ev.pointerId, px(ev));
+      if (pinch && pts.size === 2) {
+        const ns = Math.max(MIN_DAYS - 1, Math.min(n - 1, pinch.span * pinch.d / Math.max(20, spread())));
+        const anchor = pinch.a + pinch.frac * pinch.span; setWin(anchor - pinch.frac * ns, anchor - pinch.frac * ns + ns); return;
+      }
+      if (drag && drag.cross) { view_.cross(barAt(ev), py(ev)); return; }
+      if (drag) {
+        const dx = px(ev) - drag.x;
+        if (!drag.moved && Math.abs(dx) > 4) { drag.moved = true; clearTimeout(hold); box.classList.add('panning'); view_.cross(null); }
+        if (drag.moved) { const shift = -dx / iw * (drag.b - drag.a + 1); setWin(drag.a + shift, drag.b + shift); }
+        return;
+      }
+      if (ev.pointerType === 'mouse') view_.cross(barAt(ev), py(ev));
+    });
+    const end = (ev) => {
+      pts.delete(ev.pointerId); clearTimeout(hold); box.classList.remove('panning');
+      if (pinch) { if (pts.size < 2) pinch = null; drag = null; return; }
+      if (drag && !drag.moved && ev.type === 'pointerup') view_.cross(barAt(ev), py(ev));  // a tap reads the bar
+      drag = null;
+    };
+    svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+    svg.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse' && !drag) view_.cross(null); });
+
+    // Navigator: the whole history as a small area chart, with the window as a box you can drag or resize.
+    const NH = 46, nsvg = S('svg', {viewBox: `0 0 ${W} ${NH + 18}`, role: 'group', 'aria-label': t('navigator')}, nav);
+    const ng = n > iw / 2 ? 'week' : 'day', nb = bucketsOf(ng), nmx = Math.max(1e-9, ...nb.map(x => x.total));
+    const NX = (i) => m.l + i / n * iw;  // day index -> x; the window covers [a, b + 1)
+    const nx = (x) => NX(Math.max(0, diff(d0, x.from)) + (diff(x.from, x.to) + 1) / 2);
+    let area = `M${m.l},${NH - 2}`; nb.forEach(x => { area += `L${nx(x).toFixed(1)},${(NH - 2 - x.total / nmx * (NH - 8)).toFixed(1)}`; });
+    area += `L${W - m.r},${NH - 2}Z`;
+    S('rect', {x: m.l, y: 0, width: iw, height: NH, rx: 6, fill: 'var(--sunken)'}, nsvg);
+    S('path', {d: area, fill: 'var(--accent)', 'fill-opacity': .22, stroke: 'var(--accent)', 'stroke-opacity': .6, 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke'}, nsvg);
+    const byYear = n > 550, minGap = byYear ? 40 : 56;
+    let lastX = -1e9;
+    for (let mo = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + 1, 1)); mo <= last; mo = new Date(Date.UTC(mo.getUTCFullYear(), mo.getUTCMonth() + 1, 1))) {
+      if (byYear && mo.getUTCMonth()) continue;
+      const x = NX(diff(d0, mo)); if (x - lastX < minGap) continue; lastX = x;
+      S('line', {x1: x, x2: x, y1: NH - 6, y2: NH, stroke: 'var(--border)'}, nsvg);
+      S('text', {x, y: NH + 13, 'text-anchor': 'middle'}, nsvg).textContent = byYear ? String(mo.getUTCFullYear())
+        : mo.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', mo.getUTCMonth() ? {month: 'short', timeZone: 'UTC'} : {year: 'numeric', month: 'short', timeZone: 'UTC'});
+    }
+    const shL = S('rect', {y: 0, height: NH, fill: 'var(--surface)', 'fill-opacity': .6}, nsvg), shR = S('rect', {y: 0, height: NH, fill: 'var(--surface)', 'fill-opacity': .6}, nsvg);
+    const sel = S('rect', {y: .5, height: NH - 1, rx: 5, fill: 'var(--accent)', 'fill-opacity': .06, stroke: 'var(--accent)', 'stroke-width': 1.2, class: 'sel'}, nsvg);
+    const hL = S('rect', {y: NH / 2 - 9, width: 6, height: 18, rx: 3, class: 'hd'}, nsvg), hR = S('rect', {y: NH / 2 - 9, width: 6, height: 18, rx: 3, class: 'hd'}, nsvg);
+    function drawNav() {
+      const x0 = NX(ch.win.a), x1 = NX(ch.win.b + 1);
+      shL.setAttribute('x', m.l); shL.setAttribute('width', Math.max(0, x0 - m.l));
+      shR.setAttribute('x', x1); shR.setAttribute('width', Math.max(0, W - m.r - x1));
+      sel.setAttribute('x', x0); sel.setAttribute('width', Math.max(2, x1 - x0));
+      hL.setAttribute('x', x0 - 3); hR.setAttribute('x', x1 - 3);
+    }
+    const npx = (ev) => { const bb = nsvg.getBoundingClientRect(); return (ev.clientX - bb.left) * W / bb.width; };
+    const dayAt = (x) => (x - m.l) / iw * n;
+    let nd = null;
+    nsvg.addEventListener('pointerdown', (ev) => {
+      const x = npx(ev), x0 = NX(ch.win.a), x1 = NX(ch.win.b + 1), grab = Math.max(8, 14 * W / nsvg.getBoundingClientRect().width);
+      try { nsvg.setPointerCapture(ev.pointerId); } catch (e) {}
+      if (Math.abs(x - x0) <= grab) nd = {mode: 'a'};
+      else if (Math.abs(x - x1) <= grab) nd = {mode: 'b'};
+      else {
+        if (x < x0 || x > x1) { const span = ch.win.b - ch.win.a, c = dayAt(x); setWin(c - span / 2, c + span / 2); }
+        nd = {mode: 'move', x, a: ch.win.a, b: ch.win.b};
+      }
+      nsvg.classList.add('dragging');
+    });
+    nsvg.addEventListener('pointermove', (ev) => {
+      if (!nd) return;
+      const x = npx(ev);
+      if (nd.mode === 'a') setWin(Math.min(dayAt(x), ch.win.b - (MIN_DAYS - 1)), ch.win.b);
+      else if (nd.mode === 'b') setWin(ch.win.a, Math.max(dayAt(x) - 1, ch.win.a + (MIN_DAYS - 1)));
+      else { const shift = (x - nd.x) / iw * n; setWin(nd.a + shift, nd.b + shift); }
+    });
+    const nend = () => { nd = null; nsvg.classList.remove('dragging'); };
+    nsvg.addEventListener('pointerup', nend); nsvg.addEventListener('pointercancel', nend);
+
+    draw();
   }
 
   /* ---------- calendar ---------- */
@@ -742,7 +929,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
     const tot = new Map(); v.byDay.forEach((m, d) => tot.set(d, dayTotal(m)));
     const keys = [...tot.keys()].sort();
     if (!keys.length) { box.appendChild(E('div', 'empty', t('none'))); $('calSub').textContent = ''; $('calRead').textContent = ''; return; }
-    const ds = state.range === 'all' ? denseStart(keys) : keys[0], skipped = keys.filter(k => k < ds).length;
+    const ds = denseStart(keys), skipped = keys.filter(k => k < ds).length;
     $('calSub').textContent = t('activeCount', {n: keys.length}) + (skipped ? ' · ' + t('hidden', {n: skipped}) : '');
     $('calRead').textContent = t('hoverDay');
     const vals = [...tot.values()].sort((a, b) => a - b), q = (p) => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))];
@@ -819,7 +1006,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
     v.inR.forEach(r => { const k = r.src + '|' + r.model, o = by[k] || (by[k] = {src: r.src, model: r.model, in: 0, out: 0, cr: 0, cw: 0, cost: 0, est: false, priced: false});
       const c = rowCost(r); o.in += r.in || 0; o.out += r.out || 0; o.cr += r.cr || 0; o.cw += r.cw || 0;
       if (c != null) { o.cost += c; o.priced = true; if (r.cost == null) o.est = true; } });
-    const list = Object.values(by).map(o => ({...o, v: state.metric === 'cost' ? o.cost : o.in + o.out + o.cr + o.cw})).sort((a, b) => b.v - a.v);
+    const list = Object.values(by).map(o => ({...o, v: o.in + o.out + o.cr + o.cw})).sort((a, b) => b.v - a.v);
     $('tblSub').textContent = t('modelsCount', {n: list.length});
     const tb = $('tbl'), mc = $('mcards'); tb.replaceChildren(); mc.replaceChildren();
     if (!list.length) { mc.appendChild(E('div', 'empty', t('none'))); return; }
@@ -829,8 +1016,7 @@ footer a:hover{color:var(--text);text-decoration:underline}
     thead.appendChild(hr); tb.appendChild(thead);
     const body = E('tbody'), max = list[0].v || 1;
     const nameCell = (o) => { const w = E('div', 'nm'), d = E('i', 'dot'), l = E('div', null, modelName(o.model)); d.style.background = color(o); if (data.sources.length > 1) l.appendChild(E('small', null, srcName(o.src))); w.append(d, l); return w; };
-    const barEl = (o) => { if (state.metric === 'cost' && !o.priced) { const b = E('div', 'bar'); b.append(E('div', 'tr'), E('em', null, '—')); return b; }
-      const b = E('div', 'bar'), tr = E('div', 'tr'), f = E('span'); f.style.width = (o.v / max * 100) + '%'; f.style.background = color(o); tr.appendChild(f); b.append(tr, E('em', null, pct(o.v / (v.total || 1)))); return b; };
+    const barEl = (o) => { const b = E('div', 'bar'), tr = E('div', 'tr'), f = E('span'); f.style.width = (o.v / max * 100) + '%'; f.style.background = color(o); tr.appendChild(f); b.append(tr, E('em', null, pct(o.v / (v.total || 1)))); return b; };
     const costEl = (o, tag) => { if (!o.priced) { const s = E(tag, 'cost muted', '—'); s.title = t('noPrice'); return s; }
       const s = E(tag, 'cost', money(o.cost)); if (o.est) s.appendChild(E('span', 'tag', t('est'))); return s; };
     list.forEach(o => {
@@ -855,10 +1041,9 @@ footer a:hover{color:var(--text);text-decoration:underline}
     renderHero(v); renderStats(v); renderQuotas(); renderDaily(v); renderCalendar(v); renderPunch(); renderTable(v);
   }
 
-  document.querySelectorAll('#rngSeg button').forEach(b => b.addEventListener('click', () => { state.range = b.dataset.r; store.set('range', state.range); render(); }));
-  // Clicking the active granularity again returns to automatic (weekly beyond 60 days).
-  document.querySelectorAll('#granSeg button').forEach(b => b.addEventListener('click', () => { state.gran = b.getAttribute('aria-pressed') === 'true' && state.gran === b.dataset.g ? 'auto' : b.dataset.g; store.set('gran', state.gran); render(); }));
-  document.querySelectorAll('#metricSeg button').forEach(b => b.addEventListener('click', () => { state.metric = b.dataset.m; store.set('metric', state.metric); render(); }));
+  // Clicking the active period again returns to automatic (the finest period whose bars stay readable).
+  document.querySelectorAll('#granSeg button').forEach(b => b.addEventListener('click', () => { state.gran = state.gran === b.dataset.g ? 'auto' : b.dataset.g; render(); }));
+  document.querySelectorAll('#metricSeg button').forEach(b => b.addEventListener('click', () => { state.metric = b.dataset.m; render(); }));
   $('langBtn').addEventListener('click', () => { lang = lang === 'zh' ? 'en' : 'zh'; store.set('lang', lang); if (data) render(); else if (failure) fail(failure); });
   $('themeBtn').addEventListener('click', () => { theme = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'; store.set('theme', theme); applyTheme(); if (data) render(); else if (failure) fail(failure); });
   addEventListener('scroll', () => $('top').classList.toggle('stuck', scrollY > 4), {passive: true});

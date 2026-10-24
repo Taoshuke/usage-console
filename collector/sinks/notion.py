@@ -95,10 +95,17 @@ def comparable(row):
     return tuple(row.get(k) if row.get(k) is not None else None for k, _ in NUMBERS)
 
 
-def push(data, options, log=print):
-    token = os.environ.get("NOTION_TOKEN")
+def check_token(token):
     if not token:
         sys.exit("NOTION_TOKEN is not set; create an internal integration and export its token")
+    if not token.isascii() or "<" in token or ">" in token or " " in token:
+        sys.exit("NOTION_TOKEN still holds a placeholder; set it to the integration's real token "
+                 "(it starts with ntn_ or secret_)")
+
+
+def push(data, options, log=print):
+    token = os.environ.get("NOTION_TOKEN")
+    check_token(token)
     db = options["database"]
 
     existing, settings = {}, {}
@@ -147,8 +154,7 @@ def push(data, options, log=print):
 
 def init(parent_page_id):
     token = os.environ.get("NOTION_TOKEN")
-    if not token:
-        sys.exit("NOTION_TOKEN is not set")
+    check_token(token)
     num = {"number": {"format": "number"}}
     db = call(token, "POST", "/databases", {
         "parent": {"type": "page_id", "page_id": parent_page_id},

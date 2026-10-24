@@ -62,6 +62,13 @@ class NotionSinkTest(unittest.TestCase):
         self.assertNotIn("@timezone", keys)  # same value as stored, so no write
         self.assertTrue(all(k.startswith("@") for k in keys))
 
+    def test_placeholder_token_is_rejected_with_a_clear_message(self):
+        for bad in ("", "<令牌>", "<token>", "ntn_ abc"):
+            with self.assertRaises(SystemExit) as e:
+                notion.check_token(bad)
+            self.assertIn("NOTION_TOKEN", str(e.exception))
+        notion.check_token("ntn_abc123")
+
     def test_creates_new_rows_updates_changed_and_keeps_missing(self):
         old = notion.row_props({**ROW, "out": 1})
         stored = {"Key": {"title": [{"plain_text": notion.row_key(ROW)}]}, **{k: v for k, v in old.items() if k != "Key"}}

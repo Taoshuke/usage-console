@@ -10,13 +10,14 @@ The page reads `data/usage.json` next to `index.html`. Version 1:
   "currency": "USD",
   "demo": false,                              // true shows the sample-data notice
   "sources": [{ "id": "claude-code", "name": "Claude Code", "kind": "logs" }],   // kind: logs | billing
-  "prices": {                                 // USD per million tokens: input, output, cache read, cache write
-    "verified": false,                        // false shows the "placeholder prices" notice
-    "per_mtok": { "claude-opus-5-5": [5, 25, 0.5, 6.25] }
+  "prices": {                                 // USD per million tokens: input, output, cache read, 5-minute cache write,
+    "verified": false,                        //   and optionally 1-hour cache write; false shows the "placeholder prices" notice
+    "per_mtok": { "claude-opus-5-5": [4, 20, 0.2, 5, 8] }
   },
   "rows": [
     { "d": "2026-10-07", "src": "claude-code", "model": "claude-opus-5-5",
       "in": 90000, "out": 1100000, "cr": 260000000, "cw": 6000000,
+      "cw1h": 4000000,        // optional: the part of cw written to the 1-hour cache (priced at the fifth price)
       "sessions": 4,          // optional: sessions that started that day with this model
       "messages": 310,        // optional: messages that day
       "requests": 0,          // optional: API requests (billing sources)

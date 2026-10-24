@@ -24,7 +24,7 @@ VERSION = "2022-06-28"
 TEXT_CHUNK = 2000            # Notion caps one rich-text item at 2000 characters
 WRITE_PAUSE = 0.34           # stay under the API's average limit of three requests per second
 NUMBERS = (("in", "Input"), ("out", "Output"), ("cr", "Cache read"), ("cw", "Cache write"),
-           ("sessions", "Sessions"), ("messages", "Messages"), ("requests", "Requests"), ("cost", "Cost"))
+           ("cw1h", "Cache write 1h"), ("sessions", "Sessions"), ("messages", "Messages"), ("requests", "Requests"), ("cost", "Cost"))
 SETTINGS = ("generated", "timezone", "currency", "sources", "prices", "quotas", "longest_session", "punch")
 
 
@@ -172,7 +172,7 @@ def init(parent_page_id):
         "parent": {"type": "page_id", "page_id": parent_page_id},
         "title": [{"type": "text", "text": {"content": "tokenboard"}}],
         "properties": {"Key": {"title": {}}, "Date": {"date": {}}, "Source": {"select": {}}, "Model": {"rich_text": {}},
-                       "Input": num, "Output": num, "Cache read": num, "Cache write": num, "Sessions": num,
+                       "Input": num, "Output": num, "Cache read": num, "Cache write": num, "Cache write 1h": num, "Sessions": num,
                        "Messages": num, "Requests": num, "Cost": {"number": {"format": "dollar"}}, "Value": {"rich_text": {}}}})
     print(json.dumps({"database": db["id"]}, indent=2))
 

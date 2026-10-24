@@ -445,7 +445,9 @@ footer a:hover{color:var(--text);text-decoration:underline}
   function rowCost(r) {
     if (r.cost != null) return r.cost;
     const p = (data.prices && data.prices.per_mtok || {})[r.model];
-    return p ? ((r.in || 0) * p[0] + (r.out || 0) * p[1] + (r.cr || 0) * p[2] + (r.cw || 0) * p[3]) / 1e6 : null;
+    if (!p) return null;
+    const cw1h = Math.min(r.cw1h || 0, r.cw || 0);  // cw counts all cache writes; cw1h is the 1-hour share
+    return ((r.in || 0) * p[0] + (r.out || 0) * p[1] + (r.cr || 0) * p[2] + ((r.cw || 0) - cw1h) * p[3] + cw1h * (p[4] != null ? p[4] : p[3])) / 1e6;
   }
   const val = (r) => state.metric === 'cost' ? rowCost(r) || 0 : rowTok(r);
   const fmt = (n, full) => state.metric === 'cost' ? money(n, full) : tok(n);

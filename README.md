@@ -57,8 +57,8 @@ Adding a source means writing one module in `collector/sources/` that returns ro
 Claude Code numbers match its own `/stats`: for the days `/stats` has computed, the collector takes tokens,
 messages and sessions from `~/.claude/stats-cache.json`, and only the days after that are counted from the
 session logs (there, subagents are included and a reply streamed over several lines counts once). Set
-`"use_stats_cache": false` on the source to count everything from the logs instead. Costs from logs are estimates based on `prices.json`; the values shipped
-here are placeholders, so check your provider's current prices and set `"verified": true`. Billing sources can
+`"use_stats_cache": false` on the source to count everything from the logs instead. Costs from logs are estimates based on `prices.json`, which holds the providers' published
+standard rates as of the `"checked"` date; update it when prices change. Billing sources can
 report billed amounts, which the page marks `Billed`.
 
 ## Development

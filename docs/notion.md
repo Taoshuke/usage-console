@@ -29,7 +29,7 @@ cleaned up. 中文步骤见下半部分。
    From then on schedule `scripts/sync.ps1` / `sync.sh`; `schedule.ps1` picks it automatically.
 
 The database is data, not a document: leave its rows to the collector. A database created before the
-`Messages` column existed needs a number column named `Messages` added by hand. When a source marks its rows
+`Messages` or `Cache write 1h` columns existed needs those number columns added by hand. When a source marks its rows
 complete through a day (Claude Code does, for the days its `/stats` cache covers), rows of that source up to
 that day that are no longer produced are moved to the Notion trash.
 
@@ -58,4 +58,4 @@ that day that are no longer produced are moved to the Notion trash.
    ```
 5. 把令牌存为采集脚本用的环境变量 `NOTION_TOKEN`，运行一次 `python3 collector/collect.py`，再用 `./scripts/deploy.sh`（或 `deploy.ps1`）部署页面。之后定时运行 `scripts/sync.ps1` 或 `sync.sh` 即可；`schedule.ps1` 会自动选择。
 
-这个数据库存的是数据，不是文档，行内容交给采集脚本维护，不要手动修改。在新增 `Messages` 列之前建的数据库，要手动加一个名为 `Messages` 的数字列。来源声明某天之前的数据已完整时（Claude Code 对 `/stats` 缓存覆盖的日期会这样声明），该来源在这一天及之前、本次没有再生成的行会被移到 Notion 的垃圾箱。
+这个数据库存的是数据，不是文档，行内容交给采集脚本维护，不要手动修改。在新增 `Messages`、`Cache write 1h` 列之前建的数据库，要手动加上这两个数字列。来源声明某天之前的数据已完整时（Claude Code 对 `/stats` 缓存覆盖的日期会这样声明），该来源在这一天及之前、本次没有再生成的行会被移到 Notion 的垃圾箱。

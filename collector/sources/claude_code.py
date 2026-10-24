@@ -5,7 +5,9 @@ tokens, messages and sessions match /stats exactly:
 - each model's daily tokens come from the cache; they are split into input, output, cache read and cache
   write in the proportions the logs show for that day and model, or the model's all-time proportions when
   the logs for that day are gone
-- the day's messages and sessions come from the cache and go to the row of the day's busiest model
+- the share of cache writes that went to the 1-hour cache follows the logs for that day and model
+- the day's messages and sessions come from the cache and go to the row of the day's busiest model; a day
+  with activity but no token record is put under the "unrecorded_model" option ("unknown" by default)
 - the longest session is the one the cache reports
 Days after that are counted from the logs with the rules below.
 
@@ -67,7 +69,7 @@ def split(total, weights):
     return dict(zip(keys, parts))
 
 
-def from_cache(cache, log_rows):
+def from_cache(cache, log_rows, unrecorded_model="unknown"):
     """Rows for the days the cache covers; log rows only lend their token proportions."""
     logged = {(r["d"], r["model"]): r for r in log_rows}
     rows = []
@@ -77,11 +79,14 @@ def from_cache(cache, log_rows):
         models = cache["days"].get(day, {})
         day_rows = []
         for model, total in sorted(models.items()):
-            mix = logged.get((day, model)) or cache["mix"].get(model, {})
-            day_rows.append({"d": day, "src": SOURCE["id"], "model": model, **split(total, mix)})
+            log = logged.get((day, model))
+            row = {"d": day, "src": SOURCE["id"], "model": model, **split(total, log or cache["mix"].get(model, {}))}
+            if log and log.get("cw1h") and log.get("cw"):
+                row["cw1h"] = min(row["cw"], round(row["cw"] * log["cw1h"] / log["cw"]))
+            day_rows.append(row)
         messages, sessions = cache["activity"].get(day, (0, 0))
         if (messages or sessions) and not day_rows:
-            day_rows.append({"d": day, "src": SOURCE["id"], "model": "unknown", **split(0, {})})
+            day_rows.append({"d": day, "src": SOURCE["id"], "model": unrecorded_model, **split(0, {})})
         if day_rows:
             top = max(day_rows, key=lambda r: models.get(r["model"], 0))
             if sessions:
@@ -105,7 +110,7 @@ def collect(options, tz):
     cache = load_cache(os.path.expanduser(options.get("stats_cache", "~/.claude/stats-cache.json")))
     if options.get("use_stats_cache", True) and cache:
         later = [r for r in result["rows"] if r["d"] > cache["through"]]
-        result["rows"] = from_cache(cache, result["rows"]) + later
+        result["rows"] = from_cache(cache, result["rows"], options.get("unrecorded_model", "unknown")) + later
         result["longest_session"] = cached_longest(cache["longest"]) or result["longest_session"]
         result["complete_through"] = cache["through"]
     return result
@@ -163,6 +168,7 @@ def collect_logs(options, tz):
                         cell = usage[(when.date().isoformat(), model)]
                         for key, field in PARTS:
                             cell[key] += u.get(field) or 0
+                        cell["cw1h"] += (u.get("cache_creation") or {}).get("ephemeral_1h_input_tokens") or 0
 
     session_count = defaultdict(int)
     for first, _, model in sessions.values():
@@ -174,6 +180,8 @@ def collect_logs(options, tz):
         cell = usage.get((day, model), {})
         row = {"d": day, "src": SOURCE["id"], "model": model}
         row.update({key: cell.get(key, 0) for key, _ in PARTS})
+        if cell.get("cw1h"):
+            row["cw1h"] = cell["cw1h"]
         if session_count.get((day, model)):
             row["sessions"] = session_count[(day, model)]
         rows.append(row)
